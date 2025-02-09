@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Determine User Level</title>
+  <script>
+    async function submitInput() {
+      const userInput = document.getElementById("userInput").value;
+      if (!userInput) return;
+
+      const response = await fetch("/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: userInput }),
+      });
+      const data = await response.json();
+
+      // If an error or message is returned, show it in red
+      if (data.error || data.message) {
+        document.getElementById("conversation").innerHTML += `<p style="color:red;">${data.error || data.message}</p>`;
+        return;
+      }
+
+      // If a question is returned, append it to the conversation
+      if (data.question) {
+        const conv = document.getElementById("conversation");
+        // Count the current number of messages to number the new question
+        const currentCount = conv.getElementsByTagName("p").length + 1;
+        conv.innerHTML += `<p>${currentCount}. ${data.question}</p>`;
+        document.getElementById("userInput").value = "";
+      }
+      // If the final result is returned, display the assessment details
+      else if (data.result) {
+        console.log("in")
+        let breakdownHtml = "<ul>";
+        data.breakdown.forEach(point => {
+          breakdownHtml += `<li>${point}</li>`;
+        });
+        breakdownHtml += "</ul>";
+        document.getElementById("conversation").innerHTML += `<p><strong>${data.result}</strong></p>`;
+        document.getElementById("conversation").innerHTML += `<p>Score Breakdown:</p>${breakdownHtml}`;
+        if(data.summary){
+          document.getElementById("conversation").innerHTML += `<p>Summary: ${data.summary}</p>`;
+        }
+        // Hide input after final assessment
+        document.getElementById("inputForm").style.display = "none";
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Determine User Level</h1>
+  <div id="inputForm">
+    <label for="userInput">Enter your query or response:</label>
+    <input type="text" id="userInput" placeholder="Type here...">
+    <button onclick="submitInput()">Submit</button>
+  </div>
+  <div id="conversation" style="margin-top:20px;"></div>
+</body>
+</html>
