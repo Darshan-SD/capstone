@@ -4,15 +4,23 @@ from langchain_google_genai import GoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_community.llms.ollama import Ollama
 from langchain.schema.document import Document
+from dotenv import load_dotenv
 import os
 
 from get_embedding_function import get_embedding_function
 
 CHROMA_PATH = "chroma"
-
+load_dotenv()
 # Set up Google Gemini LLM
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+print(f"GOOGLE_API_KEY inside query_data.py: {GOOGLE_API_KEY}")
 llm = GoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY)
+
+
+# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# if not GEMINI_API_KEY:
+#     raise ValueError("Error: GEMINI_API_KEY is not set in the environment.")
+# llm = GoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GEMINI_API_KEY)
 
 # PROMPT_TEMPLATE = """
 # Answer the question based only on the following context:

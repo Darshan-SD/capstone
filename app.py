@@ -6,12 +6,12 @@ import json
 import logging
 from query_data import query_rag
 import pandas as pd
-
+from dotenv import load_dotenv
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
-
+load_dotenv()
 # Set up Google Gemini LLM
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 llm = GoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY)

@@ -13,7 +13,7 @@
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
 import os
 
-HF_API_KEY = "PASTE_YOUR_HUGGINGFACE_API_KEY"
+HF_API_KEY = "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"
 
 def get_embedding_function():
     embeddings = HuggingFaceInferenceAPIEmbeddings(
