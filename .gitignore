@@ -1,3 +1,4 @@
 capstone-venv
 .env
 chroma
+chroma_db
