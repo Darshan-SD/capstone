@@ -450,7 +450,7 @@ def submit():
         user_session.update({"query": user_input, "responses": [], "questions": [], "question_count": 1, "scores": []})
         first_question = generate_question(user_input)
         user_session["questions"].append(first_question)
-        return jsonify({"question": first_question, "clear_input": True})
+        return jsonify({"final_response": False, "question": first_question, "clear_input": True})
 
     last_question = user_session["questions"][-1]
     user_session["responses"].append(user_input)
@@ -475,6 +475,7 @@ def submit():
         logging.info("Finalizing session. Score: %s, Summary: %s, Relevant IDs: %s", user_session["scores"], summary, relevant_topic_ids)
 
         return jsonify({
+            "final_response": True,
             "result": f"User Level: {inferred_level}",
             "score_breakdown": user_session["scores"],
             "summary": summary,
@@ -496,7 +497,7 @@ def submit():
             user_input_with_history += f"Assistant{i+1}: {question}\nUser{i+1}: {response}\n\n"
     next_question = generate_question(user_input_with_history)
     user_session["questions"].append(next_question)
-    return jsonify({"question": next_question, "clear_input": True})
+    return jsonify({"final_response": False, "question": next_question, "clear_input": True})
 
 if __name__ == "__main__":  
     app.run(debug=True)
