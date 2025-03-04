@@ -15,13 +15,13 @@ app = Flask(__name__)
 load_dotenv()
 
 
-MIN_QUESTIONS = 1
+MIN_QUESTIONS = 2
 MAX_QUESTIONS = 2 # Agent B decides dynamically how many to ask
 
 # Load LLM models
-llm_master = Ollama(model="mistral")  # Master Agent
-llm_agent_a = Ollama(model="mistral")  # FAQ Handler (Agent A)
-llm_agent_b = Ollama(model="mistral")  # Learning Plan Generator (Agent B)
+llm_master = Ollama(model="llama3.2")  # Master Agent
+llm_agent_a = Ollama(model="llama3.2")  # FAQ Handler (Agent A)
+llm_agent_b = Ollama(model="llama3.2")  # Learning Plan Generator (Agent B)
 
 # Excel file paths
 main_excel_file = "Resources Version 3.xlsx"
@@ -46,24 +46,28 @@ def classify_query(user_query):
     Master Agent: Determines if the query goes to Agent A (FAQ) or Agent B (Learning Plan).
     Returns: "A" or "B"
     """
-    master_prompt = f"""
-    You are an AI assistant classifying user queries into two categories:
+    master_prompt = (
+    "You are an AI assistant classifying user queries into two categories:\n"
 
-    - "A" → The user is asking a factual AI/ML question (e.g., "What is deep learning?").
-    - "B" → The user is requesting a learning plan (e.g., "I want to learn transformers.", "I want to learn about computer vision.").
+    "- 'A' → The user is asking a factual AI/ML question or casual Hi/Hello/How are you? chat (e.g., 'What is deep learning?', 'hey', 'hello').\n"
+    "- 'B' → The user wants to learn in AI/ML field and requesting a learning plan (e.g., 'I want to learn transformers.', 'I want to learn about computer vision.').\n"
 
-    **RULES:**
-    - ONLY return "A" or "B". DO NOT return any extra text.
-    - If the query is a general AI learning request (e.g., "I want to learn AI"), classify as "B".
-    - If the query asks about a specific AI/ML concept (e.g., "Explain backpropagation"), classify as "A".
+    "**RULES:**\n"
+    "- ONLY return 'A' or 'B'. DO NOT return any extra text.\n"
+    "- If the query is a general AI learning request (e.g., 'I want to learn AI'), classify as 'B'.\n"
+    "- If the query asks about a specific AI/ML concept to explain (e.g., 'Explain backpropagation'), classify as 'A'.\n"
+    f"- Give JSON Response Only. For example:\n"
+    "{\n"
+    '  "category": "A"\n'
+    "}\n\n"
     
-    User Query: "{user_query}"
-    
-    **FINAL OUTPUT:** (ONLY "A" or "B", nothing else)
-    """
+    f"User Query: {user_query}"
+    )
 
     # Invoke LLM with lower temperature
     response = llm_master.invoke(master_prompt).strip()
+    logging.info(f"Master Agent raw response: '{response}'")
+    response = json.loads(response)["category"]
 
     # Add debug logging to track the raw response
     logging.info(f"Master Agent raw response: '{response}'")
@@ -99,34 +103,93 @@ def agent_a_answer(user_query):
     """
     Agent A (FAQ Handler): Provides direct AI/ML answers without RAG.
     """
-    prompt = f"Provide a concise, factual answer to this AI/ML question: {user_query}"
+    prompt = f"Provide a concise, factual answer to this user query and stick to  AI/ML field only: {user_query}"
     response = llm_agent_a.invoke(prompt).strip()
     logging.info(f"Agent A provided response: {response}")
     return response
 
 ### 3️ Agent B: Generate Follow-up Questions ###
-def agent_b_followup(user_responses):
+def agent_b_followup(context):
     """
     Agent B generates one follow-up question at a time based on previous responses.
     It dynamically decides whether more questions are needed.
     """
-    prompt = f"""
-    The user wants to learn AI/ML. Based on their responses so far, generate the next logical follow-up question.
+    # prompt = f"""
+    # The user wants to learn AI/ML. Based on their responses so far, generate the next logical follow-up question.
 
-    **RULES:**
-    - Consider the context and prior responses.
-    - Ensure the follow-up question logically continues the conversation.
-    - Do NOT repeat previous questions.
-    - Stay within the limit of {MAX_QUESTIONS} total follow-ups.
+    # **RULES:**
+    # - Consider the context and prior responses.
+    # - Ensure the follow-up question logically continues the conversation.
+    # - Do NOT repeat previous questions.
+    # - Stay within the limit of {MAX_QUESTIONS} total follow-ups.
     
-    User Responses:
-    {user_responses}
+    # User Responses:
+    # {user_responses}
 
-    **Final Output:** Return only the next follow-up question.
-    """
+    # **Final Output:** Return only the next follow-up question.
+    # """
 
+    prompt = (
+        f"You are an expert in generating concise, targeted questions to assess a user's current knowledge in Artificial Intelligence and Machine Learning (AI/ML). "
+        "Your role is to engage in natural, conversational interactions while:\n"
+        "- Evaluating user needs and knowledge level.\n"
+        "- Understand how long user is willing to spend learning.\n"
+        "- Recommending appropriate learning resources.\n"
+        "- Explaining concepts clearly.\n"
+        "- Encouraging and motivating the user.\n\n"
+        
+        "### STRICT RULES:\n"
+        "- Do not ask user direct questions what user already wants to know. For example, if user want to learn about Decision trees, do not ask 'Can you tell me what is Decision tree?'. But try to ask about any experience, programming knowledge, how much time the user have to learn and other related things.\n"
+        "- Stay on topic; DO NOT change the discussion to unrelated subjects.\n"
+        "- If the user is vague or uncertain (e.g., 'I don't know' or 'I'm not sure'), ask clarifying questions within the SAME topic.\n"
+        "- Ensure each follow-up question builds upon the user's last clear response.\n"
+        "- Avoid repeating previously asked questions.\n"
+        "- Your response must be in JSON format.\n\n"
+        
+        "### RESPONSE FORMAT:\n"
+        "You must return the response in the following JSON format:\n"
+        "{\n"
+        '  "question": "Your generated follow-up question based on the conversation so far."\n'
+        "}\n\n"
+        
+        "### Example Conversations:\n\n"
+        
+        "**Example 1:**\n"
+        "User: I want to learn Machine Learning.\n"
+        "Assistant: Do you have hands-on experience in this field?\n"
+        "User: I know a bit about it but never implemented any projects.\n"
+        "Assistant: That's a good start! What's your main goal with Machine Learning? (Data Science, Web Development, General Programming, Scripting/Automation, Game Development, etc.)\n"
+        "User: I want to get into Data Science.\n"
+        "Assistant: I see! That requires programming skills. How comfortable are you with Python?\n"
+        "User: I know the basics of Python, such as loops, functions, and data structures.\n"
+        "Assistant: Great! Data Science involves a lot of math. Are you familiar with Linear Algebra and Statistics?\n"
+        "User: I studied them in college but need a refresher.\n"
+        "Assistant: Perfect! How many hours per day/week can you dedicate to studying Machine Learning?\n"
+        "User: I can dedicate 2-3 hours daily.\n\n"
+        
+        "**Example 2:**\n"
+        "User: I want to learn math concepts for AI.\n"
+        "Assistant: Do you have any prior experience in AI or ML?\n"
+        "User: Yes, but only classification and regression.\n"
+        "Assistant: That's a good start! What specific math concepts are you interested in learning?\n"
+        "User: Matrix operations and optimization algorithms.\n"
+        "Assistant: Great! Since you have experience, I assume you know Python. How comfortable are you with it?\n"
+        "User: I am comfortable with Python and have used it for data analysis.\n"
+        "Assistant: What is your availability for studying math concepts for AI?\n"
+        "User: As much as it requires.\n\n"
+        
+        f"Now, generate only ONE follow-up question based on the following conversation/query:\n{context}\n DO NOT REPEAT QUESTIONS.\n Respond in JSON format"
+    )
+    logging.info(f"\n\n\nAgent B follow-up prompt: {prompt}\n\n\n")
     response = llm_agent_b.invoke(prompt).strip()
-    logging.info(f"Agent B generated follow-up: {response}")
+    logging.info(f"Agent B generated follow-up: {response}\n\n\n")
+    # return response
+
+    if "```" in response:
+        response = response.split("```json")[1].split("```")[0].strip()
+        
+    response = json.loads(response)["question"]
+    logging.info("Generated question: %s", response)
     return response
 
 
@@ -159,7 +222,8 @@ def agent_b_score_response(response, question):
       "more_questions_needed": "Yes" or "No"
     }}
     """
-
+    logging.info(f"\n\n\nScoring User Prompt: {prompt}\n\n\n")
+    logging.info(f"\n\n\nUser Response with Question: {response, question}\n\n\n")
     result = llm_agent_b.invoke(prompt).strip()
     result_data = json.loads(result)
 
@@ -302,7 +366,7 @@ def submit():
     # If a session is ongoing, use the same agent (Agent A or B)
     if "assigned_agent" in user_session:
         logging.info(f"Continuing session with Agent {user_session['assigned_agent']}.")
-        return submit_response()
+        return submit_response(user_query)
 
     # Step 1: Classify the query (Master Agent)
     classification = classify_query(user_query)
@@ -337,9 +401,9 @@ def submit():
         return jsonify({"error": "Failed to classify the query. Please try again."}), 500
 
 @app.route("/submit_response", methods=["POST"])
-def submit_response():
+def submit_response(user_response):
     data = request.json
-    user_response = data.get("response")
+    # user_response = data.get("response")
     question_index = data.get("question_index", 0)  #Ensure it defaults to 0 if missing
 
     if question_index is None:
@@ -364,20 +428,36 @@ def submit_response():
             return jsonify({"error": "Invalid question index."}), 400
 
         question = user_session["questions"][question_index]
+        logging.info(f"Received user response: {user_response}")
         score, reasoning, more_questions_needed = agent_b_score_response(user_response, question)
 
         user_session["responses"].append(user_response)
         user_session["scores"].append({"response": user_response, "score": score, "reasoning": reasoning})
 
+        logging.info(f"Uset Session: {user_session}")
+
         # If max questions reached or no more questions needed → Final Response
         if len(user_session["responses"]) >= MAX_QUESTIONS or more_questions_needed == "No":
            return final_result(agent="B")
+        
+
+
+        user_input_with_history = ""
+        if len(user_session["responses"]) > 0:
+            user_input_with_history += f"User: {user_session['query']}\n\n"
+            for i, (response, question) in enumerate(zip(user_session["responses"], user_session["questions"])):
+                user_input_with_history += f"Assistant{i+1}: {question}\nUser{i+1}: {response}\n\n"
+        next_question = agent_b_followup(user_input_with_history)
+        user_session["questions"].append(next_question)
+        return jsonify({"question": next_question, "clear_input": True})
+
+
 
         # If more questions needed, generate the next one
-        next_question = agent_b_followup(user_session["responses"])
-        user_session["questions"].append(next_question)
+        # next_question = agent_b_followup(user_session["responses"])
+        # user_session["questions"].append(next_question)
 
-        return jsonify({"question": next_question})
+        # return jsonify({"question": next_question})
 
     # Prevent Agent A from interfering if Agent B was assigned
     if assigned_agent == "A":
