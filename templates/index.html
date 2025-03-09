@@ -83,80 +83,66 @@
 
         if (data.question) {
           addMessage(data.question, "bot");
-        } else if (data.result) {
-          addMessage(`✅ ${data.result}`, "bot");
+        } else if (data.final_response == true) {  // ✅ NEW CHECK FOR FINAL RESPONSE
+          addMessage(`<strong>User Level:</strong> ${data.user_level}`, "bot", true);
+          addMessage(`<strong>Summary:</strong> ${data.summary}`, "bot", true);
 
-          if (data.summary) {
-            addMessage(`<strong>Summary:</strong> ${data.summary}`, "bot", true);
-          }
-
-          // ✅ Fix: Ensure Key Elements are displayed
+          // ✅ Display Key Elements
           if (data.key_elements && Array.isArray(data.key_elements)) {
             const keyElementsHtml = `<strong>Key Elements:</strong> <ul class="list-disc pl-5">${data.key_elements.map(e => `<li>${e}</li>`).join("")}</ul>`;
             addMessage(keyElementsHtml, "bot", true);
           }
 
-          // ✅ Fix: Ensure Score Breakdown is displayed
-          // if (data.score_breakdown && Array.isArray(data.score_breakdown)) {
-          //   const scoreBreakdownHtml = `<strong>Score Breakdown:</strong> <pre class="bg-gray-200 p-2 rounded">${JSON.stringify(data.score_breakdown, null, 2)}</pre>`;
-          //   addMessage(scoreBreakdownHtml, "bot", true);
-          // }
+          // ✅ Display Score Breakdown
           if (data.score_breakdown && Array.isArray(data.score_breakdown)) {
             let scoreBreakdownHtml = `<strong>Score Breakdown:</strong> <div class="bg-gray-100 p-3 rounded-md border-l-4 border-gray-500">`;
             data.score_breakdown.forEach((entry, index) => {
               scoreBreakdownHtml += `
-            <div class="mb-2 p-2 bg-gray-50 border border-gray-300 rounded">
-                <p><strong>Response ${index + 1}:</strong> ${entry.response}</p>
-                <p><strong>Score:</strong> ${entry.score}</p>
-                <p><strong>Reasoning:</strong> ${entry.reasoning}</p>
-            </div>
-        `;
+        <div class="mb-2 p-2 bg-gray-50 border border-gray-300 rounded">
+          <p><strong>Response ${index + 1}:</strong> ${entry.response}</p>
+          <p><strong>Score:</strong> ${entry.score}</p>
+          <p><strong>Reasoning:</strong> ${entry.reasoning}</p>
+        </div>
+      `;
             });
             scoreBreakdownHtml += `</div>`;
             addMessage(scoreBreakdownHtml, "bot", true);
           }
 
+          // ✅ Display RAG Response
           if (data.rag_response) {
-            // let ragResponseHtml = `<strong>RAG Response:</strong> ${data.rag_response}`;
-            // addMessage(ragResponseHtml, "bot", true);
-            // console.log(data.rag_response);
-            // console.log(typeof data.rag_response);
-
             let formattedResponse = `<div class="response-container">`;
-
-            // Example: Extract Course Title
             if (data.rag_response.course_title) {
               formattedResponse += `<h4>${data.rag_response.course_title}</h4>`;
             }
-
-            if(data.rag_response.introduction){
+            if (data.rag_response.introduction) {
               formattedResponse += `<p><strong>Introduction:</strong> ${data.rag_response.introduction}</p>`;
             }
-
-            // Example: Extract Weeks & Lessons
             if (data.rag_response.weeks && Array.isArray(data.rag_response.weeks)) {
               formattedResponse += `<h3 class="section-title">Course Outline:</h3>`;
               data.rag_response.weeks.forEach((week, index) => {
                 formattedResponse += `
-            <div class="week-container">
-                <h3>Week ${week.week}: ${week.title}</h3>
-                <p><strong>Description:</strong> ${week.description}</p>
-                <p><strong>Key Takeaways:</strong> ${week.key_takeaways?.join(", ") || "N/A"}</p>
-                <p><strong>Suggested Exercises:</strong> ${week.suggested_exercises || "N/A"}</p>
-                <p><a href="${week.url}" target="_blank" class="resource-link">More Info</a></p>
-            </div>
-        `;
+                    <div class="week-container">
+                      <h3>Week ${week.week}: ${week.title}</h3>
+                      <p><strong>Description:</strong> ${week.description}</p>
+                      <p><strong>Key Takeaways:</strong> ${week.key_takeaways?.join(", ") || "N/A"}</p>
+                      <p><strong>Suggested Exercises:</strong> ${week.suggested_exercises || "N/A"}</p>
+                      <p><a href="${week.url}" target="_blank" class="resource-link">More Info</a></p>
+                    </div>
+                  `;
               });
             }
-
             formattedResponse += `</div>`;
             addMessage(formattedResponse, "bot", true);
           }
 
+          // ✅ Display Sources Links
           if (data.sources_links) {
             let sourcesLinksHtml = `<strong>Sources:</strong> <ul class="list-disc pl-5">${data.sources_links.map(e => `<li><a href="${e}" target="_blank">${e}</a></li>`).join("")}</ul>`;
             addMessage(sourcesLinksHtml, "bot", true);
           }
+        } else if (data.result) {  // ✅ Agent A's Response
+          addMessage(`✅ ${data.result}`, "bot");
         }
       }
 
