@@ -19,9 +19,9 @@ MIN_QUESTIONS = 2
 MAX_QUESTIONS = 2 # Agent B decides dynamically how many to ask
 
 # Load LLM models
-llm_master = Ollama(model="llama3.2")  # Master Agent
-llm_agent_a = Ollama(model="llama3.2")  # FAQ Handler (Agent A)
-llm_agent_b = Ollama(model="llama3.2")  # Learning Plan Generator (Agent B)
+llm_master = Ollama(model="mistral")  # Master Agent
+llm_agent_a = Ollama(model="mistral")  # FAQ Handler (Agent A)
+llm_agent_b = Ollama(model="mistral")  # Learning Plan Generator (Agent B)
 
 # Excel file paths
 main_excel_file = "Resources Version 3.xlsx"
@@ -348,6 +348,9 @@ def agent_b_extract_key_elements(summary):
     logging.info(f"Extracted Key Elements: {key_elements}")
     return key_elements
 
+# Session storage (Resets when a new query is received)
+user_session = {}
+
 ### Flask Routes ###
 @app.route("/")
 def index():
@@ -367,12 +370,18 @@ def submit():
     if "assigned_agent" in user_session:
         logging.info(f"Continuing session with Agent {user_session['assigned_agent']}.")
         return submit_response(user_query)
-
+    
+    # Reset session only when a new query is entered after a completed conversation
+    if user_session.get("conversation_ended", False):
+        logging.info("New query detected. Resetting session...")
+        user_session.clear()
+    
     # Step 1: Classify the query (Master Agent)
     classification = classify_query(user_query)
     logging.info(f"Master Agent classified the query as: {classification}")
     
     user_session.clear()
+    user_session["conversation_ended"] = False  # Ensure conversation tracking resets
     
     if classification == "A":
         user_session["assigned_agent"] = "A"  # Store the assigned agent: A
@@ -460,20 +469,25 @@ def submit_response(user_response):
         # return jsonify({"question": next_question})
 
     # Prevent Agent A from interfering if Agent B was assigned
-    if assigned_agent == "A":
-        logging.info("Agent A is handling the query.")
-        answer = agent_a_answer(user_response)
-        user_session.clear()  # Reset after answering
-        return jsonify({
-            "final_response": False,
-            "result": f"✅ Agent A: {answer}"})
+    # if assigned_agent == "A":
+    #     logging.info("Agent A is handling the query.")
+    #     answer = agent_a_answer(user_response)
+    #     user_session.clear()  # Reset after answering
+    #     return jsonify({
+    #         "final_response": False,
+    #         "result": f"✅ Agent A: {answer}"})
 
     return jsonify({"error": "Unexpected behavior. Please state your query."}), 500
 
 
 def final_result(agent, answer=None):
+    
+    user_session["conversation_ended"] = True  # Mark conversation as ended
+    if "assigned_agent" in user_session:
+        del user_session["assigned_agent"]
+
     if agent == "A":
-        user_session.clear()  # Reset session after completion
+        # user_session.clear()  # Reset session after completion
         return jsonify({
             "final_response": False,
             "result": f"✅ Agent A: {answer}"})  # Return Agent A's final result
@@ -492,7 +506,7 @@ def final_result(agent, answer=None):
         rag_response = query_rag(summary, relevant_doc_ids)
         score_breakdown = user_session["scores"]
 
-        user_session.clear()  # Clear session after completion
+        # user_session.clear()  # Clear session after completion
 
         return jsonify({
             "final_response": True,
