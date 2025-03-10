@@ -7,6 +7,7 @@ import pandas as pd
 from query_data import query_rag
 from dotenv import load_dotenv
 import re  # Import regex for extracting numbers
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -43,57 +44,83 @@ user_session = {"query": None, "responses": [], "questions": [], "question_count
 ### 1️ Master Agent: Classify Query ###
 def classify_query(user_query):
     """
-    Master Agent: Determines if the query goes to Agent A (FAQ) or Agent B (Learning Plan).
-    Returns: "A" or "B"
+    Master Agent: Determines if the query goes to Agent A (FAQ), Agent B (Learning Plan), 
+    or if the user is greeting (redirecting them to AI/ML questions).
+    Returns: "A", "B", or "GREET"
     """
     master_prompt = (
-    "You are an AI assistant classifying user queries into two categories:\n"
-
-    "- 'A' → The user is asking a factual AI/ML question or casual Hi/Hello/How are you? chat (e.g., 'What is deep learning?', 'hey', 'hello').\n"
-    "- 'B' → The user wants to learn in AI/ML field and requesting a learning plan (e.g., 'I want to learn transformers.', 'I want to learn about computer vision.').\n"
-
-    "**RULES:**\n"
-    "- ONLY return 'A' or 'B'. DO NOT return any extra text.\n"
-    "- If the query is a general AI learning request (e.g., 'I want to learn AI'), classify as 'B'.\n"
-    "- If the query asks about a specific AI/ML concept to explain (e.g., 'Explain backpropagation'), classify as 'A'.\n"
-    f"- Give JSON Response Only. For example:\n"
-    "{\n"
-    '  "category": "A"\n'
-    "}\n\n"
+    "### MASTER CLASSIFICATION AGENT ###\n\n"
+    "You are an AI assistant responsible for classifying user queries into one of three categories:\n\n"
     
-    f"User Query: {user_query}"
+    " **Category A (FAQ Agent)** → The user is asking a **factual AI/ML question**\n"
+    "   - Example: 'What is deep learning?', 'Explain backpropagation.', 'What is the difference between CNN and RNN?'\n\n"
+
+    " **Category B (Learning Plan Agent)** → The user wants to learn about AI/ML concepts and is requesting a **structured learning plan**\n"
+    "   - Example: 'I want to learn transformers.', 'How do I start with machine learning?', 'Guide me on learning computer vision.'\n\n"
+
+    " **Category GREET (Greeting/Non-AI Query)** → The user is greeting, making small talk, or entering an unrelated query\n"
+    "   - Example: 'Hello!', 'How are you?', 'What's up?', 'Good morning!'\n"
+    "   - **Response:** If a greeting is detected, respond with a polite message encouraging the user to ask something AI/ML-related.\n\n"
+    
+    "**IMPORTANT RULES:**\n"
+    "1 Return only a JSON object with a single key 'category' and one of these values: 'A', 'B', or 'GREET'.\n"
+    "2 If unsure, default to 'A' (FAQ) for specific AI/ML concept explanations or 'B' (Learning Plan) for general AI/ML learning requests.\n"
+    "3 If the query is a greeting or off-topic, classify as 'GREET'.\n\n"
+
+    "### Example Responses:\n"
+    "- User Query: 'What is reinforcement learning?'\n"
+    "  { \"category\": \"A\" }\n"
+    "- User Query: 'I want to become an AI engineer.'\n"
+    "  { \"category\": \"B\" }\n"
+    "- User Query: 'Hey there!'\n"
+    "  { \"category\": \"GREET\" }\n\n"
+    
+    f"User Query: \"{user_query}\"\n"
+    "### JSON Response (Only return this):"
     )
 
     # Invoke LLM with lower temperature
     response = llm_master.invoke(master_prompt).strip()
+    
+    # Debugging logs
     logging.info(f"Master Agent raw response: '{response}'")
-    response = json.loads(response)["category"]
+    
+    try:
+        response_data = json.loads(response)
+        classification = response_data.get("category", "Unknown")
+    except json.JSONDecodeError:
+        classification = "Unknown"
 
-    # Add debug logging to track the raw response
-    logging.info(f"Master Agent raw response: '{response}'")
-
-    # Extract classification result
-    classification = response if response in ["A", "B"] else "Unknown"
-
-    # Retry classification if "Unknown"
+    # Handling the unknown classification
     if classification == "Unknown":
         logging.warning(f"Master Agent struggled to classify: '{user_query}'. Retrying with a refined prompt...")
         
-        retry_prompt = f"""
-        Classify the user query into "A" or "B" based on these rules:
-
-        - "A" → Factual AI/ML question (e.g., "What is deep learning?")
-        - "B" → Learning request (e.g., "I want to learn transformers.")
-
-        **STRICT RULE:** Return ONLY "A" or "B". No extra text.
-
-        User Query: "{user_query}"
+        retry_prompt = (
+        "Classify the user query into one of the following:\n"
+        "- \"A\": Factual AI/ML question (e.g., \"What is deep learning?\")\n"
+        "- \"B\": Learning request (e.g., \"I want to learn transformers.\")\n"
+        "- \"GREET\": Greeting or non-AI/ML conversation (e.g., \"Hello!\", \"How are you?\")\n\n"
         
-        **Final Answer:** (Only "A" or "B")
-        """
+        "**STRICT RULE:** Return ONLY a JSON object like this:\n"
+        "{ \"category\": \"A\" } or { \"category\": \"B\" } or { \"category\": \"GREET\" }\n\n"
+
+        f"User Query: \"{user_query}\"\n"
+        "### Final Answer (Only return JSON):"
+        )
+
         response = llm_master.invoke(retry_prompt).strip()
         logging.info(f"Master Agent retry response: '{response}'")
-        classification = response if response in ["A", "B"] else "Unknown"
+        
+        try:
+            response_data = json.loads(response)
+            classification = response_data.get("category", "Unknown")
+        except json.JSONDecodeError:
+            classification = "Unknown"
+
+    # If the query is a greeting, provide a polite redirection message
+    if classification == "GREET":
+        logging.info("Master Agent detected a greeting. Redirecting user to AI/ML domain.")
+        return "GREET"
 
     logging.info(f"Master Agent classified the query as: {classification}")
     return classification
@@ -242,13 +269,34 @@ def find_relevant_topic_ids(summary):
     prompt = f"""
     Given the AI/ML-related summary:
     "{summary}"
+    
     Here are topics and their IDs:
     {topics_str}
 
-    Identify the most relevant topic IDs. Output only the IDs separated by commas.
+    Identify the most relevant topic IDs.
+
+    **STRICT RULES:**
+    - Return ONLY the topic IDs as a comma-separated list of numbers.
+    - Do NOT include topic names or extra text.
+    - Example Output: `12,14,20`
     """
+    # response = llm_agent_b.invoke(prompt).strip()
+    # logging.info(f"relevant topic ids: {response}")
+    # return list(map(int, response.split(","))) if response else []
     response = llm_agent_b.invoke(prompt).strip()
-    return list(map(int, response.split(","))) if response else []
+    
+    if not response:
+        logging.warning("No topic IDs identified from the response.")
+        return []
+
+    try:
+        # Extract only numbers using regex
+        topic_ids = list(map(int, re.findall(r"\d+", response)))
+        logging.info(f"Relevant topic IDs: {topic_ids}")
+        return topic_ids
+    except ValueError as e:
+        logging.error(f"Failed to parse topic IDs from response: {response}. Error: {e}")
+        return []
 
 ### 7️ Read User Level IDs from Excel ###
 def get_user_level_ids():
@@ -256,13 +304,13 @@ def get_user_level_ids():
     return dict(zip(df["User Level"], df["ID"]))
 
 ### 8 Find User Level ID ###
-def find_relevant_user_level_ids(summary):
+def find_relevant_user_level_ids(user_level):
     user_level_dict = get_user_level_ids()
     levels_str = "\n".join([f"{level}: {level_id}" for level, level_id in user_level_dict.items()])
     
     prompt = f"""
-    Given the AI/ML-related summary:
-    "{summary}"
+    Given is the user level:
+    "{user_level}"
     Here are user levels and their IDs:
     {levels_str}
 
@@ -276,27 +324,59 @@ def find_relevant_user_level_ids(summary):
     """
 
     response = llm_agent_b.invoke(prompt).strip()
-    logging.info(f"Raw User Level Response: {response}")
+    logging.info(f"Relevant User Level id: {response}")
 
     # Extract only the first number from the response
     match = re.search(r"\d+", response)
     if match:
-        return int(match.group(0))  # Convert extracted number to int
+        user_level = int(match.group(0))
+        if user_level not in [1, 2, 3]:  # Ensure valid level
+            logging.warning(f"Unexpected level {user_level}, defaulting to Beginner (1).")
+            return 1
+        return user_level
+        # return int(match.group(0))  # Convert extracted number to int
 
     logging.error("Could not extract a valid user level ID.")
     return None  # Return None if no valid ID found
 
 ### 9 Filter Relevant Resources ###
+# def filter_records_by_topics_and_user_level(relevant_topic_ids, user_level_id):
+#     df = pd.read_excel(main_excel_file, sheet_name=main_sheet)
+#     df[main_topic_ids_col] = df[main_topic_ids_col].apply(lambda x: [int(i) for i in str(x).split(',')])
+#     df[main_user_level_col] = df[main_user_level_col].apply(lambda x: [int(i) for i in str(x).split(',')])
+
+#     filtered_df = df[
+#         df[main_topic_ids_col].apply(lambda record: any(num in record for num in relevant_topic_ids)) &
+#         df[main_user_level_col].apply(lambda record: user_level_id in record)
+#     ]
+#     return filtered_df[main_chromadb_doc_id_col].values.tolist()
 def filter_records_by_topics_and_user_level(relevant_topic_ids, user_level_id):
     df = pd.read_excel(main_excel_file, sheet_name=main_sheet)
-    df[main_topic_ids_col] = df[main_topic_ids_col].apply(lambda x: [int(i) for i in str(x).split(',')])
-    df[main_user_level_col] = df[main_user_level_col].apply(lambda x: [int(i) for i in str(x).split(',')])
 
+    # Convert stored IDs to proper format
+    df[main_topic_ids_col] = df[main_topic_ids_col].apply(
+        lambda x: [int(i.strip()) for i in str(x).split(',') if i.strip().isdigit()]
+    )
+    df[main_user_level_col] = df[main_user_level_col].apply(
+        lambda x: [int(i.strip()) for i in str(x).split(',') if i.strip().isdigit()]
+    )
+
+    print(f"Relevant Topic IDs: {relevant_topic_ids}")
+    print(f"User Level ID: {user_level_id}")
+    print(df[[main_topic_ids_col, main_user_level_col]].head())  # Print column data for debugging
+
+    # Apply filtering
     filtered_df = df[
         df[main_topic_ids_col].apply(lambda record: any(num in record for num in relevant_topic_ids)) &
         df[main_user_level_col].apply(lambda record: user_level_id in record)
     ]
+
+    print(f"Filtered {len(filtered_df)} documents.", flush=True)  # Ensure immediate output
+    sys.stdout.flush()  # Force printing
+
+
     return filtered_df[main_chromadb_doc_id_col].values.tolist()
+
 
 ### Extract Key Elements for RAG ###
 def extract_key_elements(summary, user_level):
@@ -310,17 +390,70 @@ def extract_key_elements(summary, user_level):
 
 ### Summarizing user response ###
 def agent_b_summarize_learning(responses):
+    # """
+    # Summarizes what the user wants to learn based on all responses.
+    # """
+    # prompt = f"""
+    # Given the following user responses related to AI/ML learning, generate a summary of their learning goals:
+
+    # {responses}
+
+    # The summary should be concise and highlight what the user wants to learn.
+
+    # Return as a single summary sentence.
+    # """
     """
     Summarizes what the user wants to learn based on all responses.
     """
     prompt = f"""
-    Given the following user responses related to AI/ML learning, generate a summary of their learning goals:
+    You are an AI assistant responsible for summarizing a user's learning goals in AI/ML.
+    
+    ### TASK:
+    - Analyze the provided user responses and identify key learning objectives.
+    - Extract specific topics the user is interested in.
+    - Capture any relevant programming skills, prior experience, and learning preferences.
+    - If the user mentions a **specific goal** (e.g., "I want to become a data scientist"), **include it** in the summary.
+    - Ensure the summary is **concise, structured, and informative**.
+    
+    ### STRICT RULES:
+    - Focus **only** on AI/ML-related learning preferences.
+    - Do **not** add extra commentary or assumptions beyond what the user stated.
+    - If the user responses lack enough detail, return **"The user wants to learn AI/ML but did not specify details."**
+    - Format the summary as a **single structured sentence**.
 
+    ### EXAMPLES:
+    #### Example 1:
+    **User Responses:**
+    - "I want to learn about deep learning."
+    - "I have some experience with Python."
+    - "I am interested in computer vision."
+    
+    **Summary Output:**
+    "The user wants to learn deep learning and computer vision, has some experience with Python, and aims to expand their AI/ML knowledge."
+
+    #### Example 2:
+    **User Responses:**
+    - "I want to learn AI."
+    - "I'm not sure where to start."
+    
+    **Summary Output:**
+    "The user wants to learn AI but has not specified a starting point."
+
+    #### Example 3:
+    **User Responses:**
+    - "I want to become a machine learning engineer."
+    - "I am familiar with linear regression but want to explore deep learning."
+    - "I have intermediate Python skills and know basic statistics."
+    
+    **Summary Output:**
+    "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression."
+
+    ---
+    
+    ### USER RESPONSES:
     {responses}
 
-    The summary should be concise and highlight what the user wants to learn.
-
-    Return as a single summary sentence.
+    ### FINAL SUMMARY OUTPUT:
     """
 
     summary = llm_agent_b.invoke(prompt).strip()
@@ -328,18 +461,66 @@ def agent_b_summarize_learning(responses):
     return summary
 
 ### extracting key elements ###
-def agent_b_extract_key_elements(summary):
+def agent_b_extract_key_elements(summary,user_level):
+    # """
+    # Extracts key AI/ML topics from the user’s learning summary.
+    # """
+    # prompt = f"""
+    # Given the following summary of the user's AI/ML learning goals:
+    
+    # "{summary}"
+    # Include the user's level: {user_level}.
+
+    # Extract key concepts or topics that are relevant. These should be specific to AI/ML learning (e.g., "Neural Networks", "Computer Vision", "Supervised Learning").
+    
+    # Return a comma-separated list of key topics.
+    # """
+
     """
-    Extracts key AI/ML topics from the user’s learning summary.
+    Extracts key AI/ML topics from the user’s learning summary and includes the user level.
     """
     prompt = f"""
-    Given the following summary of the user's AI/ML learning goals:
+    You are an AI model tasked with extracting key AI/ML-related topics from a user's learning summary. 
+
+    ### TASK:
+    - Identify important AI/ML concepts, skills, and tools mentioned in the summary.
+    - Extract **only** relevant keywords (e.g., "Neural Networks", "Deep Learning", "Python", "Statistics").
+    - Include the user's proficiency level **at the end** of the list.
+
+    ### STRICT RULES:
+    - Extract **only AI/ML-related** keywords (no extra words or explanations).
+    - Ensure the extracted topics are **comma-separated**.
+    - At the end of the list, **append the user level**.
+    - Do **not** generate full sentences—only the formatted list of keywords.
+
+    ### EXAMPLES:
+
+    #### Example 1:
+    **Input Summary:**
+    "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression."
     
-    "{summary}"
+    **User Level:** Beginner
+
+    **Expected Output:**
+    `machine learning, python, statistics, deep learning, linear regression, beginner`
+
+    #### Example 2:
+    **Input Summary:**
+    "The user is interested in reinforcement learning, has advanced Python experience, knows probability theory, and wants to improve deep learning fundamentals."
     
-    Extract key concepts or topics that are relevant. These should be specific to AI/ML learning (e.g., "Neural Networks", "Computer Vision", "Supervised Learning").
-    
-    Return a comma-separated list of key topics.
+    **User Level:** Advanced
+
+    **Expected Output:**
+    reinforcement learning, python, probability theory, deep learning, advanced
+
+    ----
+
+    ### USER INPUT:
+    **Summary:** "{summary}"
+    **User Level:** {user_level}
+
+    ### FINAL OUTPUT FORMAT:
+    - Return only a comma-separated list of key topics, followed by the user level.
     """
 
     key_elements_response = llm_agent_b.invoke(prompt).strip()
@@ -347,6 +528,36 @@ def agent_b_extract_key_elements(summary):
 
     logging.info(f"Extracted Key Elements: {key_elements}")
     return key_elements
+
+def respond_greeting(user_query):
+    logging.info("Master Agent detected a greeting. Generating a dynamic greeting response.")
+
+    greeting_prompt = (
+    "You are an AI assistant responding to a greeting message.\n\n"
+    "**Objective:**\n"
+    "- Greet the user warmly and naturally.\n"
+    "- Encourage them to ask a question related to AI or Machine Learning.\n"
+    "- Suggest AI/ML topics they might find interesting.\n\n"
+
+    "**Response Style:**\n"
+    "- Friendly and engaging.\n"
+    "- Keep the response under 50 words.\n\n"
+
+    "### Example Responses:\n"
+    "- 'Hello! Hope you're having a great day. If you're curious about AI, I can help! Want to learn about deep learning or natural language processing?'\n"
+    "- 'Hey there! I’d love to chat about AI and ML. What aspect of artificial intelligence interests you the most today?'\n"
+    "- 'Hi! It’s great to hear from you. If you're looking to explore AI, we can discuss topics like computer vision, neural networks, or ethical AI. What interests you?'\n\n"
+
+    f"User Message: \"{user_query}\"\n"
+    "### Generate a friendly response:"
+    )
+
+    greeting_response = llm_master.invoke(greeting_prompt).strip()
+    logging.info(f"Greeting response generated: '{greeting_response}'")
+
+    return greeting_response
+
+
 
 # Session storage (Resets when a new query is received)
 user_session = {}
@@ -404,6 +615,13 @@ def submit():
         })
 
         return jsonify({"question": followup_question, "clear_input": True})  # Fixed response format
+    
+    elif classification == "GREET":
+        answer = respond_greeting(user_query)
+        return jsonify({
+            "final_response": False,
+            "greeting": True,
+            "result": f"{answer}"})
 
     else:
         logging.error(f"Unexpected classification result: {classification}")
@@ -443,7 +661,7 @@ def submit_response(user_response):
         user_session["responses"].append(user_response)
         user_session["scores"].append({"response": user_response, "score": score, "reasoning": reasoning})
 
-        logging.info(f"Uset Session: {user_session}")
+        logging.info(f"User Session: {user_session}")
 
         # If max questions reached or no more questions needed → Final Response
         if len(user_session["responses"]) >= MAX_QUESTIONS or more_questions_needed == "No":
@@ -490,6 +708,7 @@ def final_result(agent, answer=None):
         # user_session.clear()  # Reset session after completion
         return jsonify({
             "final_response": False,
+            "greeting": False,
             "result": f"✅ Agent A: {answer}"})  # Return Agent A's final result
 
     elif agent == "B":
@@ -497,19 +716,20 @@ def final_result(agent, answer=None):
         user_level = "Beginner" if avg_score < 2 else "Intermediate" if avg_score < 3.5 else "Advanced"
 
         summary = agent_b_summarize_learning(user_session["responses"])
-        key_elements = agent_b_extract_key_elements(summary)
+        key_elements = agent_b_extract_key_elements(summary,user_level)
 
         relevant_topic_ids = find_relevant_topic_ids(summary)
-        relevant_user_level_id = find_relevant_user_level_ids(summary)
+        relevant_user_level_id = find_relevant_user_level_ids(user_level)
         relevant_doc_ids = filter_records_by_topics_and_user_level(relevant_topic_ids, relevant_user_level_id)
 
         rag_response = query_rag(summary, relevant_doc_ids)
         score_breakdown = user_session["scores"]
 
         # user_session.clear()  # Clear session after completion
-
+        logging.info(f"RAG Response: {rag_response}")
         return jsonify({
             "final_response": True,
+            "greeting": False,
             "user_level": user_level,
             "summary": summary,
             "key_elements": key_elements,
