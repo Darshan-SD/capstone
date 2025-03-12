@@ -130,7 +130,41 @@ def agent_a_answer(user_query):
     """
     Agent A (FAQ Handler): Provides direct AI/ML answers without RAG.
     """
-    prompt = f"Provide a concise, factual answer to this user query and stick to  AI/ML field only: {user_query}"
+    # prompt = f"Provide a concise, factual answer to this user query and stick to  AI/ML field only: {user_query}"
+    prompt = f"""
+    You are an AI FAQ assistant specialized in answering technical questions related to Artificial Intelligence (AI) and Machine Learning (ML).
+    Your task is to provide **concise, precise, and factually accurate** responses to user queries.
+
+    **Guidelines:**
+    - Stick strictly to AI/ML topics and ignore unrelated queries.
+    - Keep responses **direct, informative, and to the point** (ideally within 2-3 sentences).
+    - If multiple interpretations exist, pick the most **commonly accepted** explanation.
+    - Do **not** provide speculative, opinion-based, or general advice beyond AI/ML.
+    - Use clear and professional language suitable for technical users.
+    - If the query is **ambiguous**, clarify it instead of making assumptions.
+
+    ### **Few-Shot Examples:**
+    **User Query:** What is the difference between supervised and unsupervised learning?
+    **Response:** Supervised learning involves training a model on labeled data, meaning each input has a corresponding correct output. Unsupervised learning, on the other hand, deals with unlabeled data, where the model identifies patterns and structures within the data without explicit guidance.
+
+    **User Query:** What is backpropagation in neural networks?
+    **Response:** Backpropagation is an optimization algorithm used to train neural networks. It calculates the gradient of the loss function with respect to each weight by using the chain rule, enabling the model to adjust weights iteratively to minimize error.
+
+    **User Query:** Can you explain the role of activation functions in deep learning?
+    **Response:** Activation functions introduce non-linearity into neural networks, enabling them to learn complex patterns. Common activation functions include ReLU, Sigmoid, and Tanh, each serving different purposes based on the task and network architecture.
+
+    **User Query:** How does a decision tree work in machine learning?
+    **Response:** A decision tree is a flowchart-like model that splits data into branches based on feature values. It recursively partitions data into subsets until it reaches a decision, making it useful for classification and regression tasks.
+
+    **User Query:** What is the role of a loss function in machine learning?
+    **Response:** A loss function quantifies the difference between predicted and actual values in a model. It helps in optimizing the model by guiding adjustments to its parameters to minimize prediction errors.
+
+    ---
+
+    **Now, respond to the following user query based on the provided guidelines and examples:**
+    **User Query:** {user_query}
+    **Your Response:**
+    """
     response = llm_agent_a.invoke(prompt).strip()
     logging.info(f"Agent A provided response: {response}")
     return response
@@ -389,37 +423,83 @@ def extract_key_elements(summary, user_level):
     return llm_agent_b.invoke(prompt).strip().split(", ")
 
 ### Summarizing user response ###
-def agent_b_summarize_learning(responses):
+def agent_b_summarize_learning(responses, user_availability):
     # """
     # Summarizes what the user wants to learn based on all responses.
     # """
     # prompt = f"""
-    # Given the following user responses related to AI/ML learning, generate a summary of their learning goals:
+    # You are an AI assistant responsible for summarizing a user's learning goals in AI/ML.
+    
+    # ### TASK:
+    # - Analyze the provided user responses and identify key learning objectives.
+    # - Extract specific topics the user is interested in.
+    # - Capture any relevant programming skills, prior experience, and learning preferences.
+    # - If the user mentions a **specific goal** (e.g., "I want to become a data scientist"), **include it** in the summary.
+    # - Ensure the summary is **concise, structured, and informative**.
+    
+    # ### STRICT RULES:
+    # - Focus **only** on AI/ML-related learning preferences.
+    # - Do **not** add extra commentary or assumptions beyond what the user stated.
+    # - If the user responses lack enough detail, return **"The user wants to learn AI/ML but did not specify details."**
+    # - Format the summary as a **single structured sentence**.
 
+    # ### EXAMPLES:
+    # #### Example 1:
+    # **User Responses:**
+    # - "I want to learn about deep learning."
+    # - "I have some experience with Python."
+    # - "I am interested in computer vision."
+    
+    # **Summary Output:**
+    # "The user wants to learn deep learning and computer vision, has some experience with Python, and aims to expand their AI/ML knowledge."
+
+    # #### Example 2:
+    # **User Responses:**
+    # - "I want to learn AI."
+    # - "I'm not sure where to start."
+    
+    # **Summary Output:**
+    # "The user wants to learn AI but has not specified a starting point."
+
+    # #### Example 3:
+    # **User Responses:**
+    # - "I want to become a machine learning engineer."
+    # - "I am familiar with linear regression but want to explore deep learning."
+    # - "I have intermediate Python skills and know basic statistics."
+    
+    # **Summary Output:**
+    # "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression."
+
+    # ---
+    
+    # ### USER RESPONSES:
     # {responses}
 
-    # The summary should be concise and highlight what the user wants to learn.
+    # ### USER AVAILABILTY
+    # {user_availability}
 
-    # Return as a single summary sentence.
+    # ### FINAL SUMMARY OUTPUT:
     # """
     """
-    Summarizes what the user wants to learn based on all responses.
+    Summarizes what the user wants to learn based on all responses, including availability.
     """
     prompt = f"""
     You are an AI assistant responsible for summarizing a user's learning goals in AI/ML.
     
     ### TASK:
     - Analyze the provided user responses and identify key learning objectives.
-    - Extract specific topics the user is interested in.
-    - Capture any relevant programming skills, prior experience, and learning preferences.
+    - Extract specific AI/ML topics the user is interested in.
+    - Capture relevant programming skills, prior experience, and learning preferences.
     - If the user mentions a **specific goal** (e.g., "I want to become a data scientist"), **include it** in the summary.
+    - Incorporate the **user’s availability** into the summary naturally at the end.
     - Ensure the summary is **concise, structured, and informative**.
-    
+
     ### STRICT RULES:
     - Focus **only** on AI/ML-related learning preferences.
     - Do **not** add extra commentary or assumptions beyond what the user stated.
+    - Do **not** speculate on availability (e.g., "The user has limited time" → instead, use exact availability like "1 month").
     - If the user responses lack enough detail, return **"The user wants to learn AI/ML but did not specify details."**
-    - Format the summary as a **single structured sentence**.
+    - Format the summary as a **single structured sentence**, ensuring readability.
 
     ### EXAMPLES:
     #### Example 1:
@@ -427,31 +507,37 @@ def agent_b_summarize_learning(responses):
     - "I want to learn about deep learning."
     - "I have some experience with Python."
     - "I am interested in computer vision."
-    
+    **User Availability:** "I have 2 months."
+
     **Summary Output:**
-    "The user wants to learn deep learning and computer vision, has some experience with Python, and aims to expand their AI/ML knowledge."
+    "The user wants to learn deep learning and computer vision, has some experience with Python, and aims to expand their AI/ML knowledge within 2 months."
 
     #### Example 2:
     **User Responses:**
     - "I want to learn AI."
     - "I'm not sure where to start."
-    
+    **User Availability:** "I can dedicate 4 weeks."
+
     **Summary Output:**
-    "The user wants to learn AI but has not specified a starting point."
+    "The user wants to learn AI but has not specified a starting point and has 4 weeks available for learning."
 
     #### Example 3:
     **User Responses:**
     - "I want to become a machine learning engineer."
     - "I am familiar with linear regression but want to explore deep learning."
     - "I have intermediate Python skills and know basic statistics."
-    
+    **User Availability:** "I have only 1 month."
+
     **Summary Output:**
-    "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression."
+    "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression within 1 month."
 
     ---
     
     ### USER RESPONSES:
     {responses}
+
+    ### USER AVAILABILITY:
+    {user_availability}
 
     ### FINAL SUMMARY OUTPUT:
     """
@@ -462,20 +548,53 @@ def agent_b_summarize_learning(responses):
 
 ### extracting key elements ###
 def agent_b_extract_key_elements(summary,user_level):
+   
     # """
-    # Extracts key AI/ML topics from the user’s learning summary.
+    # Extracts key AI/ML topics from the user’s learning summary and includes the user level.
     # """
     # prompt = f"""
-    # Given the following summary of the user's AI/ML learning goals:
-    
-    # "{summary}"
-    # Include the user's level: {user_level}.
+    # You are an AI model tasked with extracting key AI/ML-related topics from a user's learning summary. 
 
-    # Extract key concepts or topics that are relevant. These should be specific to AI/ML learning (e.g., "Neural Networks", "Computer Vision", "Supervised Learning").
+    # ### TASK:
+    # - Identify important AI/ML concepts, skills, and tools mentioned in the summary.
+    # - Extract **only** relevant keywords (e.g., "Neural Networks", "Deep Learning", "Python", "Statistics").
+    # - Include the user's proficiency level **at the end** of the list.
+
+    # ### STRICT RULES:
+    # - Extract **only AI/ML-related** keywords (no extra words or explanations).
+    # - Ensure the extracted topics are **comma-separated**.
+    # - At the end of the list, **append the user level**.
+    # - Do **not** generate full sentences—only the formatted list of keywords.
+
+    # ### EXAMPLES:
+
+    # #### Example 1:
+    # **Input Summary:**
+    # "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression."
     
-    # Return a comma-separated list of key topics.
+    # **User Level:** Beginner
+
+    # **Expected Output:**
+    # machine learning, python, statistics, deep learning, linear regression, beginner
+
+    # #### Example 2:
+    # **Input Summary:**
+    # "The user is interested in reinforcement learning, has advanced Python experience, knows probability theory, and wants to improve deep learning fundamentals."
+    
+    # **User Level:** Advanced
+
+    # **Expected Output:**
+    # reinforcement learning, python, probability theory, deep learning, advanced
+
+    # ----
+
+    # ### USER INPUT:
+    # **Summary:** "{summary}"
+    # **User Level:** {user_level}
+
+    # ### FINAL OUTPUT FORMAT:
+    # - Return only a comma-separated list of key topics, followed by the user level.
     # """
-
     """
     Extracts key AI/ML topics from the user’s learning summary and includes the user level.
     """
@@ -485,12 +604,14 @@ def agent_b_extract_key_elements(summary,user_level):
     ### TASK:
     - Identify important AI/ML concepts, skills, and tools mentioned in the summary.
     - Extract **only** relevant keywords (e.g., "Neural Networks", "Deep Learning", "Python", "Statistics").
-    - Include the user's proficiency level **at the end** of the list.
+    - **STRICTLY use the provided user level, do not infer your own.**
+    - Ensure that the extracted topics are **directly from the summary**.
+    - At the end of the list, **append the user level exactly as provided**.
 
     ### STRICT RULES:
     - Extract **only AI/ML-related** keywords (no extra words or explanations).
     - Ensure the extracted topics are **comma-separated**.
-    - At the end of the list, **append the user level**.
+    - **DO NOT guess the user level**—always use **"{user_level}"** at the end.
     - Do **not** generate full sentences—only the formatted list of keywords.
 
     ### EXAMPLES:
@@ -502,7 +623,7 @@ def agent_b_extract_key_elements(summary,user_level):
     **User Level:** Beginner
 
     **Expected Output:**
-    `machine learning, python, statistics, deep learning, linear regression, beginner`
+    machine learning, python, statistics, deep learning, linear regression, beginner
 
     #### Example 2:
     **Input Summary:**
@@ -513,14 +634,23 @@ def agent_b_extract_key_elements(summary,user_level):
     **Expected Output:**
     reinforcement learning, python, probability theory, deep learning, advanced
 
+    #### Example 3 (FORCING USER LEVEL CORRECTLY):
+    **Input Summary:**
+    "The user has no prior experience working with labeled datasets, is open to gaining practical experience in supervised learning through a project using labeled data, and aims to do so within 2 weeks."
+    
+    **User Level:** Intermediate
+
+    **Expected Output:**
+    supervised learning, labeled data, intermediate
+
     ----
 
     ### USER INPUT:
     **Summary:** "{summary}"
-    **User Level:** {user_level}
+    **User Level (MUST BE INCLUDED AS IS):** {user_level}
 
     ### FINAL OUTPUT FORMAT:
-    - Return only a comma-separated list of key topics, followed by the user level.
+    - Return only a comma-separated list of key topics, followed by the exact user level: **"{user_level}"**.
     """
 
     key_elements_response = llm_agent_b.invoke(prompt).strip()
@@ -557,7 +687,37 @@ def respond_greeting(user_query):
 
     return greeting_response
 
+def generate_availability_question():
+    """
+    Uses the LLM to dynamically generate a question about the user's availability.
+    """
+    prompt = """
+    You are an AI conversation assistant guiding a user in learning AI/ML.
+    
+    ### TASK:
+    - Generate a **natural, engaging** follow-up question to ask about the user's availability.
+    - Ensure the question sounds **smooth and conversational**, rather than robotic.
+    - The question should be **short** and **clear**, making it easy for the user to respond.
+    
+    ### EXAMPLES:
+    - How much time can you dedicate for learning? (e.g., 2 weeks, 1 month, 3 months)
+    - Before we build your learning plan, could you share how much time you're planning to invest in learning?
+    - What’s your learning timeline? Are you looking for something short-term (a few weeks) or longer?
+    - To personalize your learning path, could you tell me how much time you can commit each week?
+    
+    ### STRICT RULES:
+    - **Do NOT** include long explanations or context—just return the question.
+    - The response should be a **single sentence** in proper conversational English.
+    - **Do NOT** assume any user preferences—let them specify their own time commitment.
+    
+    ### FINAL OUTPUT:
+    Generate one availability-related question.
+    """
 
+    question = llm_agent_b.invoke(prompt).strip()
+    question = re.sub(r'^"(.*)"$', r'\1', question)  
+    logging.info(f"Generated Availability Question: {question}")
+    return question
 
 # Session storage (Resets when a new query is received)
 user_session = {}
@@ -651,11 +811,18 @@ def submit_response(user_response):
 
     # Ensure Agent B handles its own responses
     if assigned_agent == "B":
+        if user_session.get("availability", False):
+            user_session["user_availability"] = user_response
+            user_session["availability"] = False 
+            logging.info(f"User Availability Recorded: {user_response}")  
+            return final_result(agent="B")
+
         if question_index >= len(user_session["questions"]):
             return jsonify({"error": "Invalid question index."}), 400
 
         question = user_session["questions"][question_index]
         logging.info(f"Received user response: {user_response}")
+        # if not user_session.get("awaiting_availability", False):
         score, reasoning, more_questions_needed = agent_b_score_response(user_response, question)
 
         user_session["responses"].append(user_response)
@@ -665,7 +832,14 @@ def submit_response(user_response):
 
         # If max questions reached or no more questions needed → Final Response
         if len(user_session["responses"]) >= MAX_QUESTIONS or more_questions_needed == "No":
-           return final_result(agent="B")
+            if "availability" not in user_session:
+                # next_question = "Before we generate your learning plan, how much time can you dedicate to learning AI/ML? (e.g., 2 weeks, 1 month, 3 months)"
+                next_question = generate_availability_question()  
+                user_session["questions"].append(next_question)
+                user_session["availability"] = True 
+                return jsonify({"question": next_question, "clear_input": True})
+                 
+            # return final_result(agent="B")
         
 
 
@@ -715,19 +889,21 @@ def final_result(agent, answer=None):
         avg_score = sum(s["score"] for s in user_session["scores"]) / len(user_session["scores"])
         user_level = "Beginner" if avg_score < 2 else "Intermediate" if avg_score < 3.5 else "Advanced"
 
-        summary = agent_b_summarize_learning(user_session["responses"])
+        summary = agent_b_summarize_learning(user_session["responses"], user_session["user_availability"])
         key_elements = agent_b_extract_key_elements(summary,user_level)
-
+        logging.info(f"User level: {user_level}")
+    
         relevant_topic_ids = find_relevant_topic_ids(summary)
         relevant_user_level_id = find_relevant_user_level_ids(user_level)
         relevant_doc_ids = filter_records_by_topics_and_user_level(relevant_topic_ids, relevant_user_level_id)
 
         rag_response = query_rag(summary, relevant_doc_ids)
         score_breakdown = user_session["scores"]
-
+        user_availability = user_session["user_availability"]
         # user_session.clear()  # Clear session after completion
         logging.info(f"RAG Response: {rag_response}")
         return jsonify({
+            "user_availability": user_availability,
             "final_response": True,
             "greeting": False,
             "user_level": user_level,
