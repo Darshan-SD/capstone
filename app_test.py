@@ -16,8 +16,8 @@ app = Flask(__name__)
 load_dotenv()
 
 
-MIN_QUESTIONS = 2
-MAX_QUESTIONS = 2 # Agent B decides dynamically how many to ask
+MIN_QUESTIONS = 7
+MAX_QUESTIONS = 10 # Agent B decides dynamically how many to ask
 
 # Load LLM models
 llm_master = Ollama(model="mistral")  # Master Agent
@@ -206,6 +206,9 @@ def agent_b_followup(context):
         "- Ensure each follow-up question builds upon the user's last clear response.\n"
         "- Avoid repeating previously asked questions.\n"
         "- Your response must be in JSON format.\n\n"
+        "- Stay within the limit of {MAX_QUESTIONS} total follow-ups."
+        "- Do NOT ask the user to explain how a concept works or define technical topics (e.g., 'Can you explain how transfer learning works?')."
+        "- Avoid tutorial or quiz-style questions. Focus on understanding user goals, background, experience, or preferences."
         
         "### RESPONSE FORMAT:\n"
         "You must return the response in the following JSON format:\n"
@@ -252,10 +255,14 @@ def agent_b_followup(context):
     response = json.loads(response)["question"]
     logging.info("Generated question: %s", response)
     return response
-
+    
+    # 2. Decide if another follow-up question is needed.
+    #    - Consider if the response was unclear, vague, or missing important details.
+    #    - If another question is needed, return "Yes".
+    #    - If no more questions are needed, return "No".
 
 ### 4️ Agent B: Score User Responses ###
-def agent_b_score_response(response, question):
+def agent_b_score_response(response, question, question_count):
     """
     Scores a user's response based on depth, correctness, and relevance.
     Also determines whether another question is needed (within limits).
@@ -270,11 +277,13 @@ def agent_b_score_response(response, question):
     1. Score the response on a scale from 0 to 5:
         - 0: No relevant information.
         - 5: Excellent response.
-    
-    2. Decide if another follow-up question is needed.
-       - Consider if the response was unclear, vague, or missing important details.
-       - If another question is needed, return "Yes".
-       - If no more questions are needed, return "No".
+
+    **RULES:**
+        - You are in a dynamic learning session that includes a minimum of {MIN_QUESTIONS} and a maximum of {MAX_QUESTIONS} follow-up questions.
+        - The user has currently answered {question_count} questions.
+        - If the user has answered **fewer than {MIN_QUESTIONS}**, always return `"more_questions_needed": "Yes"`.
+        - If the user has answered **{MAX_QUESTIONS}**, always return `"more_questions_needed": "No"`.
+        - Only decide dynamically if the number of questions is **between {MIN_QUESTIONS} and {MAX_QUESTIONS}**.
 
     **Final Output (JSON format):**
     {{
@@ -823,15 +832,29 @@ def submit_response(user_response):
         question = user_session["questions"][question_index]
         logging.info(f"Received user response: {user_response}")
         # if not user_session.get("awaiting_availability", False):
-        score, reasoning, more_questions_needed = agent_b_score_response(user_response, question)
+        
+        question_count = len(user_session["responses"])
+
+        score, reasoning, more_questions_needed = agent_b_score_response(user_response, question, question_count)
 
         user_session["responses"].append(user_response)
         user_session["scores"].append({"response": user_response, "score": score, "reasoning": reasoning})
 
         logging.info(f"User Session: {user_session}")
+        
+        next_question_count = question_count + 1
+        # Force continue if under MIN_QUESTIONS
+        if next_question_count < MIN_QUESTIONS:
+            more_questions_needed = "Yes"
 
+        # Force stop if at MAX_QUESTIONS
+        elif next_question_count >= MAX_QUESTIONS:
+            more_questions_needed = "No"
+        
+        logging.info(f"question_count: {question_count}, next_question_count: {next_question_count}, forced more_questions_needed: {more_questions_needed}")
+        logging.info(f"Scored {question_count + 1}/{MAX_QUESTIONS}: {score} - {reasoning} - More Needed? {more_questions_needed}")
         # If max questions reached or no more questions needed → Final Response
-        if len(user_session["responses"]) >= MAX_QUESTIONS or more_questions_needed == "No":
+        if next_question_count >= MAX_QUESTIONS or more_questions_needed == "No":
             if "availability" not in user_session:
                 # next_question = "Before we generate your learning plan, how much time can you dedicate to learning AI/ML? (e.g., 2 weeks, 1 month, 3 months)"
                 next_question = generate_availability_question()  

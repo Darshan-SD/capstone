@@ -110,10 +110,10 @@ def query_rag(query_text: str, relevant_doc_ids: list):
     # ]
     for doc, meta in zip(all_docs["documents"], all_docs["metadatas"]):
         print(f"\n\n-----\nMeta ID: {meta.get('id')}")
-        print(f"{type(meta.get('id'))}")
+        # print(f"{type(meta.get('id'))}")
 
-        print(f"Relevant Doc IDs: {relevant_doc_ids}")
-        print(f"Meta ID in relevant_doc_ids: {meta.get('id') in relevant_doc_ids}\n\n----\n")
+        # print(f"Relevant Doc IDs: {relevant_doc_ids}")
+        # print(f"Meta ID in relevant_doc_ids: {meta.get('id') in relevant_doc_ids}\n\n----\n")
     filtered_docs = [
         (Document(page_content=doc, metadata=meta), 0)
         for doc, meta in zip(all_docs["documents"], all_docs["metadatas"])
