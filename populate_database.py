@@ -7,10 +7,11 @@ import json
 from langchain.schema.document import Document
 from get_embedding_function import get_embedding_function
 from langchain.vectorstores.chroma import Chroma
+from config import main_excel_file, main_sheet
 
 CHROMA_PATH = "chroma"
-DATA_PATH = "Resources Version 3.xlsx"
-MAIN_SHEET = "main"
+DATA_PATH = main_excel_file #"Resources Version 3.xlsx"
+MAIN_SHEET = main_sheet #"main"
 
 def main():
     parser = argparse.ArgumentParser()

@@ -22,9 +22,9 @@ llm_agent_a = Ollama(model="mistral")
 llm_agent_b = Ollama(model="mistral")
 
 # File paths
-main_excel_file = "Resources Version 3.xlsx"
-topic_ids_excel_file = "topic_ids_v3.xlsx"
-user_level_ids_excel_file = "user_level_ids.xlsx"
+main_excel_file = "data/Resources Version 3.xlsx"
+topic_ids_excel_file = "data/topic_ids_v3.xlsx"
+user_level_ids_excel_file = "data/user_level_ids.xlsx"
 
 # Excel columns
 main_sheet = "main"
