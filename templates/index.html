@@ -6,281 +6,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
   <title>AI Learning Assistant</title>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const firstTimeUI = document.getElementById("firstTimeUI");
-      const chatContainer = document.getElementById("chatContainer");
-      const conversation = document.getElementById("conversation");
-      const sendButton = document.getElementById("sendBtn");
-      const darkModeToggle = document.getElementById("darkModeToggle");
-      const userInputField = document.getElementById("userInput");
-      const submitBtn = document.getElementById("submitBtn");
-      let chatInput;
+  <script type=text/javascript src="{{
+    url_for('static', filename='js/main.js')
+  }}"></script>
 
-      function switchToChatMode(userMessage) {
-        if (!userMessage) return;
-
-        firstTimeUI.classList.add("hidden");
-        chatContainer.classList.remove("hidden");
-
-        chatInput = document.getElementById("chatInput");
-
-        addMessage(userMessage, "user");
-
-        sendButton.addEventListener("click", submitInput);
-        chatInput.addEventListener("keypress", function (event) {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            submitInput();
-          }
-        });
-
-        processMessage(userMessage);
-      }
-
-      function addMessage(text, sender, isHtml = false) {
-        if (!text) return;
-
-        const messageElement = document.createElement("div");
-        messageElement.classList.add("message", sender);
-
-        if (isHtml) {
-          messageElement.classList.add("prose");
-          messageElement.innerHTML = text;
-        } else {
-          messageElement.innerText = text;
-        }
-
-        conversation.appendChild(messageElement);
-        conversation.scrollTop = conversation.scrollHeight;
-      }
-
-      function showTypingIndicator(show) {
-        let typingIndicator = document.getElementById("typingIndicator");
-        if (!typingIndicator) {
-          typingIndicator = document.createElement("p");
-          typingIndicator.id = "typingIndicator";
-          typingIndicator.className = "typing-indicator text-gray-500 italic";
-          typingIndicator.innerText = "💬 AI is typing...";
-          conversation.appendChild(typingIndicator);
-        }
-        typingIndicator.style.display = show ? "block" : "none";
-      }
-
-      async function processMessage(userMessage) {
-        showTypingIndicator(true);
-
-        const requestData = { input: userMessage, isPreset: true };
-
-        const response = await fetch("/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestData),
-        });
-
-        const data = await response.json();
-        showTypingIndicator(false);
-
-        if (data.question) {
-          addMessage(data.question, "bot");
-        } else if (data.result) {
-          addMessage(`✅ ${data.result}`, "bot");
-
-          if (data.summary) {
-            addMessage(`<strong>Summary:</strong> ${data.summary}`, "bot", true);
-          }
-
-          // ✅ Fix: Ensure Key Elements are displayed
-          if (data.key_elements && Array.isArray(data.key_elements)) {
-            const keyElementsHtml = `<strong>Key Elements:</strong> <ul class="list-disc pl-5">${data.key_elements.map(e => `<li>${e}</li>`).join("")}</ul>`;
-            addMessage(keyElementsHtml, "bot", true);
-          }
-
-          // ✅ Fix: Ensure Score Breakdown is displayed
-          // if (data.score_breakdown && Array.isArray(data.score_breakdown)) {
-          //   const scoreBreakdownHtml = `<strong>Score Breakdown:</strong> <pre class="bg-gray-200 p-2 rounded">${JSON.stringify(data.score_breakdown, null, 2)}</pre>`;
-          //   addMessage(scoreBreakdownHtml, "bot", true);
-          // }
-          if (data.score_breakdown && Array.isArray(data.score_breakdown)) {
-            let scoreBreakdownHtml = `<strong>Score Breakdown:</strong> <div class="bg-gray-100 p-3 rounded-md border-l-4 border-gray-500">`;
-            data.score_breakdown.forEach((entry, index) => {
-              scoreBreakdownHtml += `
-            <div class="mb-2 p-2 bg-gray-50 border border-gray-300 rounded">
-                <p><strong>Response ${index + 1}:</strong> ${entry.response}</p>
-                <p><strong>Score:</strong> ${entry.score}</p>
-                <p><strong>Reasoning:</strong> ${entry.reasoning}</p>
-            </div>
-        `;
-            });
-            scoreBreakdownHtml += `</div>`;
-            addMessage(scoreBreakdownHtml, "bot", true);
-          }
-
-          if (data.rag_response) {
-            // let ragResponseHtml = `<strong>RAG Response:</strong> ${data.rag_response}`;
-            // addMessage(ragResponseHtml, "bot", true);
-            // console.log(data.rag_response);
-            // console.log(typeof data.rag_response);
-
-            let formattedResponse = `<div class="response-container">`;
-
-            // Example: Extract Course Title
-            if (data.rag_response.course_title) {
-              formattedResponse += `<h4>${data.rag_response.course_title}</h4>`;
-            }
-
-            if(data.rag_response.introduction){
-              formattedResponse += `<p><strong>Introduction:</strong> ${data.rag_response.introduction}</p>`;
-            }
-
-            // Example: Extract Weeks & Lessons
-            if (data.rag_response.weeks && Array.isArray(data.rag_response.weeks)) {
-              formattedResponse += `<h3 class="section-title">Course Outline:</h3>`;
-              data.rag_response.weeks.forEach((week, index) => {
-                formattedResponse += `
-            <div class="week-container">
-                <h3>Week ${week.week}: ${week.title}</h3>
-                <p><strong>Description:</strong> ${week.description}</p>
-                <p><strong>Key Takeaways:</strong> ${week.key_takeaways?.join(", ") || "N/A"}</p>
-                <p><strong>Suggested Exercises:</strong> ${week.suggested_exercises || "N/A"}</p>
-                <p><a href="${week.url}" target="_blank" class="resource-link">More Info</a></p>
-            </div>
-        `;
-              });
-            }
-
-            formattedResponse += `</div>`;
-            addMessage(formattedResponse, "bot", true);
-          }
-
-          if (data.sources_links) {
-            let sourcesLinksHtml = `<strong>Sources:</strong> <ul class="list-disc pl-5">${data.sources_links.map(e => `<li><a href="${e}" target="_blank">${e}</a></li>`).join("")}</ul>`;
-            addMessage(sourcesLinksHtml, "bot", true);
-          }
-        }
-      }
-
-      function submitInput() {
-        const userInput = chatInput.value.trim();
-        if (!userInput) return;
-
-        addMessage(userInput, "user");
-        chatInput.value = "";
-        processMessage(userInput);
-      }
-
-      submitBtn.addEventListener("click", function () {
-        const userMessage = userInputField.value.trim();
-        if (!userMessage) return;
-        switchToChatMode(userMessage);
-      });
-
-      userInputField.addEventListener("keypress", function (event) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          const userMessage = userInputField.value.trim();
-          if (!userMessage) return;
-          switchToChatMode(userMessage);
-        }
-      });
-
-      document.querySelectorAll(".preset-btn").forEach((button) => {
-        button.addEventListener("click", function () {
-          const selectedTopic = this.innerText;
-          switchToChatMode(selectedTopic);
-        });
-      });
-    });
-  </script>
-
-  <style>
-    body {
-      padding: 0
-    }
-
-    .message {
-      padding: 10px;
-      border-radius: 10px;
-      margin: 5px;
-      max-width: 80%;
-    }
-
-    .bot {
-      background-color: #c1c1c1;
-      align-self: flex-start;
-    }
-
-    .user {
-      background-color: #007bff;
-      color: white;
-      align-self: flex-end;
-    }
-
-
-
-    /* RAG Styles */
-    .response-container {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 10px;
-    width: 100%;
-    border: 1px solid #ccc;
-  }
-
-  .section-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #007bff;
-    margin-top: 10px;
-  }
-
-  .week-container {
-    background-color: #ffffff;
-    padding: 10px;
-    margin-top: 30px;
-    border-radius: 6px;
-    border-left: 4px solid #007bff;
-  }
-
-  .resource-link {
-    color: #007bff;
-    text-decoration: underline;
-    font-weight: bold;
-  }
-  </style>
+  {% block stylesheet %}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
+  {% endblock stylesheet %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
 </head>
 
-<body class="bg-gray-100 text-foreground min-h-screen flex flex-col items-center justify-center w-screen">
+<body class="bg-black text-foreground min-h-screen flex flex-col items-center justify-center w-screen">
+
+  <div id="circleContainer">
+    <div id="circle1" class="circle"></div>
+    <div id="circle2" class="circle"></div>
+    <div id="circle3" class="circle"></div>
+  </div>
+  <div id="transparentContainer"></div>
 
   <!-- <button id="darkModeToggle" class="absolute top-5 right-5 bg-gray-200 dark:bg-gray-800 p-2 rounded">🌓</button> -->
 
   <div id="firstTimeUI" class="flex flex-col items-center w-full max-w-2xl">
     <h1
-      class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-red-500 to-violet-500 mb-6">
+      class="heading text-5xl font-extrabold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-red-500 to-orange-500">
       What’s on your mind?
     </h1>
-    <div class="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-md w-full" style="border-radius: 20px;">
+    <!-- <h1 class="mb-5">
+      <a class="typewrite" data-period="2000" data-type='[ "What is reinforcement learning?", "What is transfer learning?", "Give me a learning plan for NLP.", "I want to learn deep learning. How should I start?", "Give me a learning plan for computer vision." ]'>
+        <span class="wrap"></span>
+      </a>
+    </h1> -->
+    <div id="landingInputContainer" class="flex items-center space-x-2 p-2 rounded-lg shadow-lg w-full" style="border-radius: 20px;">
       <input id="userInput" type="text" placeholder="Ask anything in AI/ML"
         class="flex-grow p-3 border-none rounded-lg focus:outline-none" />
-      <button id="submitBtn" class="bg-gray-500 text-white px-5 py-3 rounded-lg hover:bg-blue-600 transition">
-        Search
+      <button id="submitBtn" class="text-white px-3 py-3 flex hover:bg-blue-600 transition">
+        <i class="fa-solid fa-paper-plane"></i>
       </button>
     </div>
 
-    <div class="flex justify-center space-x-4 mt-4">
-      <button class="preset-btn p-3 bg-gray-300 text-black rounded-lg shadow-md hover:bg-gray-400 transition">Supervised Learning</button>
-      <button class="preset-btn p-3 bg-gray-300 text-black rounded-lg shadow-md hover:bg-gray-400 transition">Statistics</button>
-      <button class="preset-btn p-3 bg-gray-300 text-black rounded-lg shadow-md hover:bg-gray-400 transition">NLP</button>
+    <div id="suggestionContainer" class="flex justify-center space-x-4 mt-4">
+      <button class="p-3 text-black rounded-lg">Supervised
+        Learning</button>
+      <button
+        class="p-3 text-black rounded-lg">Statistics</button>
+      <button
+        class="p-3 text-black rounded-lg">Natural Language Processing</button>
     </div>
   </div>
 
-  <div id="chatContainer" class="hidden flex flex-col w-full max-w-6xl bg-white p-6 rounded-lg shadow-md h-screen">
-    <div id="conversation" class="flex flex-col h-full overflow-y-auto bg-gray-50 p-4 rounded-md"></div>
-    <div id="inputContainer" class="mt-4 flex">
-      <input type="text" id="chatInput" placeholder="Type your response..."
-        class="flex-grow p-3 border rounded-lg focus:outline-none" />
-      <button id="sendBtn" class="ml-2 p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Send</button>
+  <div id="chatContainer" class="hidden flex flex-col w-full max-w-6xl p-6 rounded-lg h-screen bg-transparent">
+    <div id="conversation" class="flex flex-col h-full overflow-y-auto p-4 rounded-md bg-transparent"></div>
+    <div id="inputSection" class=" flex flex-col w-full">
+      <div id="suggestedOptions" class="flex mt4 pt-2"></div>
+
+      <div id="inputContainer" class="mt-4 p-2 flex shadow-lg">
+        <input type="text" id="chatInput" placeholder="Type your response..."
+          class="flex-grow p-3 rounded-lg focus:outline-none" />
+        <button id="sendBtn"
+          class="p-3 pl-4 pr-4 text-white rounded-lg flex items-center">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </div>
     </div>
   </div>
 

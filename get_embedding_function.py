@@ -12,10 +12,13 @@
 
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
 import os
+from dotenv import load_dotenv
 
-HF_API_KEY = "PASTE_YOUR_HUGGINGFACE_API_KEY"
+load_dotenv()
+HF_API_KEY = os.getenv("HF_API_KEY")
 
 def get_embedding_function():
+    print(f"API Key: {HF_API_KEY}")
     embeddings = HuggingFaceInferenceAPIEmbeddings(
         api_key=HF_API_KEY,
         model_name="sentence-transformers/all-MiniLM-L6-v2"
