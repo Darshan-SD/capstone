@@ -39,7 +39,7 @@ First, make sure Ollama is running in the background with Mistral model installe
 4. **Run the Application**  
     Start the Flask server by executing:
     ```python
-    python3 app_test.py
+    python3 app.py
     ```
 
 5. **Access the Chatbot**  
