@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # Constants
 MIN_QUESTIONS = 3
-MAX_QUESTIONS = 5
+MAX_QUESTIONS = 4
 
 # Error messages
 RETRY_ERROR = "Something went wrong with the servers. Please try again."

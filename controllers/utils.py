@@ -22,6 +22,7 @@ import sys
 ### Read Topic IDs from Excel ###
 def get_topic_ids():
     df = pd.read_excel(topic_ids_excel_file, sheet_name="topic_ids")
+    df = df.sample(n=6)
     return dict(zip(df[topicids_col], df[topicids_value_col]))
 
 ### Find Relevant Topic IDs ###

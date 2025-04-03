@@ -16,8 +16,8 @@ CHROMA_PATH = "chroma"
 load_dotenv()
 
 # Set up Google Gemini LLM
-# GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
-# llm = GoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY)
+GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+llm = GoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY)
 
 
 
@@ -127,7 +127,7 @@ def query_rag(query_text: str, relevant_doc_ids: list):
         # return {"rag_error": RETRY_ERROR}
       # else:
       # Invoke LLM
-      response_text = llm_agent_b.invoke(prompt) if llm_agent_b else "LLM not initialized."
+      response_text = llm.invoke(prompt) if llm_agent_b else "LLM not initialized."
 
       if "```" in response_text:
           response_text = response_text.split("```json")[1].split("```")[0].strip()
@@ -135,6 +135,10 @@ def query_rag(query_text: str, relevant_doc_ids: list):
       response_text = json.loads(response_text)
       # Extract source metadata
       sources_id = [doc[0].metadata.get("id", None) for doc in filtered_docs]
+      sources_title = [
+          json.loads(doc[0].page_content).get("Title", "No Title")
+          for doc in filtered_docs
+      ]
       sources_links = [
           json.loads(doc[0].page_content).get("URL/Link", "No URL")
           for doc in filtered_docs
@@ -156,6 +160,6 @@ def query_rag(query_text: str, relevant_doc_ids: list):
       logging.error(f"Error querying RAG: {e}")
       return {"rag_error": RETRY_ERROR}
 
-    return response_text, sources_id, sources_links, filtered_docs
+    return response_text, sources_id, sources_links, filtered_docs, sources_title
 
 # query_rag()

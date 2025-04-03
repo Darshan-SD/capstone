@@ -106,11 +106,11 @@ def agent_b_score_response(response, question, question_count):
     return result_data["score"], result_data["reasoning"], result_data["more_questions_needed"]
 
 ### Summarizing user response ###
-def agent_b_summarize_learning(responses, user_availability):
+def agent_b_summarize_learning(responses, user_availability, query):
     """
     Summarizes what the user wants to learn based on all responses, including availability.
     """
-    prompt = agent_b_summarize_learning_prompt(responses, user_availability)
+    prompt = agent_b_summarize_learning_prompt(responses, user_availability, query)
     summary = llm_agent_b.invoke(prompt).strip()
     logging.info(f"Generated User Learning Summary: {summary}")
     return summary
