@@ -2,7 +2,7 @@ from config import app, user_session, MIN_QUESTIONS, MAX_QUESTIONS, RETRY_ERROR,
 from controllers.agents import classify_query, agent_a_answer, agent_b_followup, agent_b_score_response, agent_b_summarize_learning, agent_b_extract_key_elements, generate_availability_question, respond_greeting
 from controllers.utils import filter_records_by_topics_and_user_level, find_relevant_topic_ids, find_relevant_user_level_ids
 
-from flask import request, jsonify, render_template
+from flask import request, jsonify, render_template, redirect
 import logging
 from query_data import query_rag
 
@@ -15,6 +15,43 @@ user_session = {}
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        print(request.form)
+        email = request.form['email']
+        password = request.form['password']
+        print("Login Details:", email, password)
+        # user = users_db.get(email)
+        # if user and user['password'] == password:
+        #     session['user'] = user
+        #     return redirect('/')
+        # else:
+        #     return "Invalid credentials", 401
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        print("Registration Details:", name, email, password)
+        # if password != confirm_password:
+        #     return "Passwords do not match", 400
+        # if email in users_db:
+        #     return "Email already exists", 400
+
+        # users_db[email] = {'name': name, 'email': email, 'password': password}
+        # session['user'] = users_db[email]
+        # return redirect('/')
+    return render_template('register.html')
+
+# @app.route('/logout')
+# def logout():
+#     session.pop('user', None)
+#     return redirect('/')
 
 @app.route("/submit", methods=["POST"])
 def submit():
