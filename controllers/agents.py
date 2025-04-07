@@ -7,10 +7,20 @@ from controllers.prompts import ( master_prompt_function,
                                  agent_b_summarize_learning_prompt, 
                                  agent_b_extract_key_elements_prompt, 
                                  response_greeting_prompt, 
-                                 generate_availability_question_prompt )
+                                 generate_availability_question_prompt,
+                                 check_is_regenerate_query_prompt,
+                                 regenerate_query_prompt,
+                                 modify_summary_prompt )
 import json
 import logging
 import random
+from flask import session, jsonify
+import ast
+from dotenv import load_dotenv
+import os
+from langchain_google_genai import GoogleGenerativeAI
+
+load_dotenv()
 
 # TEST SCRIPT
 # random_bool = random.choice([True, False])
@@ -150,3 +160,117 @@ def generate_availability_question():
     response = json.loads(response)
     logging.info(f"Generated Availability Question: {response}")
     return response
+
+def is_regeneration_request(user_input):
+    
+    """
+    Uses the LLM to dynamically determine if the user is asking to regenerate the given course.
+    """
+    prompt = check_is_regenerate_query_prompt(user_input)
+
+    response = llm_agent_b.invoke(prompt).strip()
+    logging.info(f"Is course plan regeneration neeeded? : {response}")
+    return response.lower()
+
+def regenerate_learning_plan(user_input):
+    """
+    Uses the LLM to regenerate the given course.
+    """
+    try:
+        # Pull from Redis session
+        existing_plan = session.get("ragResponse")
+        filtered_docs = session.get("filteredDocs")
+        key_elements = session.get("keyElements")
+        if not existing_plan:
+            logging.warning("No existing course plan found in session.")
+            return jsonify({"error": "No existing course to modify."}), 400
+        if not filtered_docs:
+            logging.warning("No existing filterd docs found in session.")
+            return jsonify({"error": "No existing filterd docs found!."}), 400
+        if not key_elements:
+            logging.warning("No key elements found in session.")
+            return jsonify({"error": "No existing key elements found!."}), 400
+
+        prompt = regenerate_query_prompt(existing_plan, user_input, filtered_docs, key_elements)
+
+        # Call LLM
+        GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+        llm = GoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY)
+
+        response_text = llm.invoke(prompt).strip()
+        #response_text = llm_agent_b.invoke(prompt).strip()
+
+        # Clean up if it's inside markdown formatting
+        if "```" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+
+        # ✅ NEW: Safely convert Python-style dict to JSON
+        try:
+            logging.info(f"🧾 Raw LLM response before parsing:\n{response_text}")
+
+            python_dict = ast.literal_eval(response_text)  # Convert to Python dict
+            response_text = json.dumps(python_dict)        # Convert to valid JSON string
+            response_text = json.loads(response_text)      # Parse as JSON
+
+        except Exception as parse_error:
+            logging.error(f"❌ JSON decoding failed: {parse_error}")
+            logging.error(f"LLM Raw Response:\n{response_text}")
+            return jsonify({"retry_error": "The learning plan couldn't be regenerated due to a formatting issue."}), 500
+
+        # Print formatted response
+        formatted_response = f"""
+        \n\n---------------Revised RESPONSE-----------------
+        Response: {response_text}
+        ----------------------------------------
+        """
+        print(formatted_response)
+
+        #modify the exisiting user summary
+        updated_summary = update_user_goal_summary(session.get("summary", ""),  user_input)
+        
+        modified_summary_print = f"""
+        \n\n---------------Modified Summary-----------------
+        Summary: {updated_summary}
+        ----------------------------------------
+        """
+        print(modified_summary_print)
+
+        # Update the session with the new plan
+        session["ragResponse"] = response_text
+        session["summary"] = updated_summary
+        session["regeneration_mode"] = False
+        session["conversation_ended"] = True
+        logging.info("✅ Course plan successfully regenerated.")
+        
+        # Reuse original source links & metadata
+        score_breakdown = session["scores"]
+        user_availability = session["user_availability"]
+        
+        #update user summary before sending the final response
+
+        return jsonify({
+            "user_availability": user_availability,
+            "final_response": True,
+            "greeting": False,
+            "user_level": session.get("usrLevel", ""),
+            "summary": session.get("summary", ""),
+            "key_elements": session.get("keyElements", ""),
+            "score_breakdown": session.get("scores", ""),
+            "relevant_topic_ids": [],
+            "relevant_user_level_ids": [],
+            "rag_response": response_text,
+            "sources": session.get("sources", []),
+            "sources_links": session.get("sources_links", []),
+        })
+
+    except Exception as e:
+        logging.error(f"Error regenerating learning plan: {e}")
+        return jsonify({"retry_error": RETRY_ERROR}), 500
+
+
+def update_user_goal_summary(existing_summary, user_input):
+
+    prompt = modify_summary_prompt(existing_summary, user_input)
+
+    return llm_agent_b.invoke(prompt).strip()
+
