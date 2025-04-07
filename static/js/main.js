@@ -163,8 +163,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             // ✅ Display Sources Links
-            if (data.sources_links) {
-                let sourcesLinksHtml = `<strong>Sources:</strong> <ul class="list-disc pl-5">${data.sources_links.map(e => `<li><a href="${e}" target="_blank">${e}</a></li>`).join("")}</ul>`;
+            if (data.sources_links && data.sources_title) {
+                let sourcesLinksHtml = `<strong>Sources:</strong> <ul class="list-disc pl-5">${data.sources_links.map((e, i) => `<li><a href="${e}" target="_blank">${data.sources_title[i]}</a></li>`).join("")}</ul>`;
                 addMessage(sourcesLinksHtml, "bot", true);
             }
         } else if (data.greeting == true) { // greeting

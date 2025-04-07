@@ -137,6 +137,10 @@ def query_rag(query_text: str, relevant_doc_ids: list):
       response_text = json.loads(response_text)
       # Extract source metadata
       sources_id = [doc[0].metadata.get("id", None) for doc in filtered_docs]
+      sources_title = [
+          json.loads(doc[0].page_content).get("Title", "No Title")
+          for doc in filtered_docs
+      ]
       sources_links = [
           json.loads(doc[0].page_content).get("URL/Link", "No URL")
           for doc in filtered_docs
@@ -158,7 +162,7 @@ def query_rag(query_text: str, relevant_doc_ids: list):
       logging.error(f"Error querying RAG: {e}")
       return {"rag_error": RETRY_ERROR}
 
-    return response_text, sources_id, sources_links, filtered_docs
+    return response_text, sources_id, sources_links, filtered_docs, sources_title
 
 def serialize_filtered_docs_for_llm(filtered_docs):
     return [

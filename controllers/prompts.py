@@ -210,7 +210,7 @@ def agent_b_score_response_prompt(response, question, question_count):
     """
     return prompt
 
-def agent_b_summarize_learning_prompt(responses, user_availability):
+def agent_b_summarize_learning_prompt(responses, user_availability, query):
     prompt = f"""
     You are an AI assistant responsible for summarizing a user's learning goals in AI/ML.
     
@@ -220,6 +220,7 @@ def agent_b_summarize_learning_prompt(responses, user_availability):
     - Capture relevant programming skills, prior experience, and learning preferences.
     - If the user mentions a **specific goal** (e.g., "I want to become a data scientist"), **include it** in the summary.
     - Incorporate the **user’s availability** into the summary naturally at the end.
+    - Incorporate the **user's initial query** into the summary naturally along with the user responses.
     - Ensure the summary is **concise, structured, and informative**.
 
     ### STRICT RULES:
@@ -260,6 +261,8 @@ def agent_b_summarize_learning_prompt(responses, user_availability):
     "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression within 1 month."
 
     ---
+    ### USER INITIAL QUERY:
+    {query}
     
     ### USER RESPONSES:
     {responses}
@@ -271,6 +274,10 @@ def agent_b_summarize_learning_prompt(responses, user_availability):
     """
     return prompt
 
+
+"- **STRICTLY use the provided user level, do not infer your own.**"
+"- At the end of the list, **append the user level exactly as provided**."
+"- **DO NOT guess the user level**—always use **""** at the end."
 def agent_b_extract_key_elements_prompt(user_level, summary):
     prompt = f"""
     You are an AI model tasked with extracting key AI/ML-related topics from a user's learning summary. 
@@ -278,14 +285,12 @@ def agent_b_extract_key_elements_prompt(user_level, summary):
     ### TASK:
     - Identify important AI/ML concepts, skills, and tools mentioned in the summary.
     - Extract **only** relevant keywords (e.g., "Neural Networks", "Deep Learning", "Python", "Statistics").
-    - **STRICTLY use the provided user level, do not infer your own.**
     - Ensure that the extracted topics are **directly from the summary**.
-    - At the end of the list, **append the user level exactly as provided**.
+    
 
     ### STRICT RULES:
     - Extract **only AI/ML-related** keywords (no extra words or explanations).
     - Ensure the extracted topics are **comma-separated**.
-    - **DO NOT guess the user level**—always use **"{user_level}"** at the end.
     - Do **not** generate full sentences—only the formatted list of keywords.
 
     ### EXAMPLES:
@@ -293,42 +298,36 @@ def agent_b_extract_key_elements_prompt(user_level, summary):
     #### Example 1:
     **Input Summary:**
     "The user wants to become a machine learning engineer, has intermediate Python skills, understands basic statistics, and wants to explore deep learning beyond linear regression."
-    
-    **User Level:** Beginner
 
     **Expected Output:**
-    machine learning, python, statistics, deep learning, linear regression, beginner
+    machine learning, python, statistics, deep learning, linear regression
 
     #### Example 2:
     **Input Summary:**
     "The user is interested in reinforcement learning, has advanced Python experience, knows probability theory, and wants to improve deep learning fundamentals."
-    
-    **User Level:** Advanced
 
     **Expected Output:**
-    reinforcement learning, python, probability theory, deep learning, advanced
+    reinforcement learning, python, probability theory, deep learning
 
-    #### Example 3 (FORCING USER LEVEL CORRECTLY):
+    #### Example 3:
     **Input Summary:**
     "The user has no prior experience working with labeled datasets, is open to gaining practical experience in supervised learning through a project using labeled data, and aims to do so within 2 weeks."
-    
-    **User Level:** Intermediate
 
     **Expected Output:**
-    supervised learning, labeled data, intermediate
+    supervised learning, labeled data
 
     ----
 
     ### USER INPUT:
     **Summary:** "{summary}"
-    **User Level (MUST BE INCLUDED AS IS):** {user_level}
 
     ### FINAL OUTPUT FORMAT:
-    - Return only a comma-separated list of key topics, followed by the exact user level: **"{user_level}"**.
+    - Return only a comma-separated list of key topics.
     """
     return prompt
 
 def response_greeting_prompt(topics_str, user_query):
+    print(f"topics_str: {topics_str}")
     prompt = (
     "You are an AI assistant responding to a greeting message.\n\n"
     "**Objective:**\n"
@@ -340,9 +339,6 @@ def response_greeting_prompt(topics_str, user_query):
     "- Friendly and engaging.\n"
     "- Keep the response under 50 words.\n\n"
 
-    "**Suggest 2-4 topics from the following list:**\n"
-    f"{topics_str}\n\n"
-
     "**Important:**\n"
     "Return the response strictly in JSON format as shown below.\n"
     "The JSON should include:\n"
@@ -351,10 +347,34 @@ def response_greeting_prompt(topics_str, user_query):
 
     "### Example JSON Response:\n"
     "{\n"
-    "  \"greeting\": \"Hi there! I'm thrilled to see you today. Fancy chatting about AI, Machine Learning, or even Data Analysis? We can dive into topics like Deep Learning, Natural Language Processing, or Python and R programming. Let me know what sparks your curiosity!\",\n"
-    "  \"suggested_quetions\": [\"What is Deep Learning?\", \"I want to learn Natural Language Processing\", \"How Python is useful in Data Analysis?\", \"I want to learn advanced topics of R programming\"]\n"
+    "  \"greeting\": \"Hi there! I'm thrilled you're here to explore the world of Machine Learning. We can chat about Supervised or Unsupervised Learning, dive into Feature Engineering, or talk about how to avoid Overfitting in your models. Let’s level up your ML knowledge!\",\n"
+    "  \"suggested_quetions\": [\"What is Feature Engineering in ML?\", \"How does Overfitting impact a model?\", \"Explain Supervised Learning with examples.\", \"Tell me about Unsupervised Learning techniques.\"]\n"
     "}\n\n"
+    "### Example JSON Response:\n"
+    "{\n"
+    "  \"greeting\": \"Hey! Interested in Reinforcement Learning, Clustering Methods, or how to evaluate ML models effectively? We can even talk about Dimensionality Reduction or use cases for Large Language Models. Ask away!\",\n"
+    "  \"suggested_quetions\": [\"What is Reinforcement Learning in practice?\", \"Explain Dimensionality Reduction in ML.\", \"What are model evaluation metrics?\", \"Tell me about Clustering Methods.\"]\n"
+    "}\n\n"
+    "### Example JSON Response:\n"
+    "{\n"
+    "  \"greeting\": \"Welcome! Ready to dive into ML fundamentals like Data Preprocessing, Bias-Variance Tradeoff, or the magic behind Large Language Models? We can also walk through how algorithms like Decision Trees and K-Means work. Let’s get started!\",\n"
+    "  \"suggested_quetions\": [\"What is the Bias-Variance Tradeoff?\", \"How does K-Means Clustering work?\", \"Tell me about Data Preprocessing steps.\", \"What are Large Language Models?\"]\n"
+    "}\n\n"
+    "### Example JSON Response:\n"
+    "{\n"
+    "  \"greeting\": \"Hello! I'm excited to guide you through core ML concepts like Model Evaluation, Cross-Validation, Hyperparameter Tuning, and Data Mining. Whether you're a beginner or leveling up, there’s something for you here!\",\n"
+    "  \"suggested_quetions\": [\"How does Cross-Validation work?\", \"Explain Hyperparameter Tuning.\", \"What is Data Mining used for?\", \"How do we evaluate a machine learning model?\"]\n"
+    "}\n\n"
+    "### Example JSON Response:\n"
+    "{\n"
+    "  \"greeting\": \"Hey there! Curious about ML pipelines, Neural Networks, or how to detect and handle Outliers? We can also explore Regularization techniques to improve model generalization. Just tell me what interests you most!\",\n"
+    "  \"suggested_quetions\": [\"What are ML pipelines?\", \"How does Regularization help in ML?\", \"Explain Neural Networks simply.\", \"How do you handle Outliers in data?\"]\n"
+    "}\n"
 
+    "Do not suggest same topics provided in the Example JSON Response.\n"
+
+    "**Suggest 2-4 topics from the following list:**\n"
+    f"{topics_str}\n\n"
     # "### Example Responses:\n"
     # "- 'Hello! Hope you're having a great day. If you're curious about AI, I can help! Want to learn about deep learning or natural language processing?'\n"
     # "- 'Hey there! I’d love to chat about AI and ML. What aspect of artificial intelligence interests you the most today?'\n"
