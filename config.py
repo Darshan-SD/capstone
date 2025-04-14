@@ -8,6 +8,34 @@ import os
 
 load_dotenv()
 
+# Open Router Elements
+OPEN_ROUTER_API_KEY = os.getenv("OPEN_ROUTER_API_KEY")
+if OPEN_ROUTER_API_KEY is None:
+    raise ValueError("OPEN_ROUTER_API_KEY not found in environment variables.")
+
+OPEN_ROUTER_HEADERS = {
+    "Authorization": f"Bearer {OPEN_ROUTER_API_KEY}",
+    "Content-Type": "application/json",
+}
+
+OPEN_ROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+def open_router_data(agent, prompt):
+    model = "mistralai/mistral-7b-instruct:free"
+    if agent == "master":
+        model = "mistralai/mistral-7b-instruct:free"
+    elif agent == "a":
+        model = "mistralai/mistral-7b-instruct:free"
+    elif agent == "b":
+        model = "mistralai/mistral-7b-instruct:free"
+    return {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
 # Initialize Flask app (optional: or keep in app_test.py)
 app = Flask(__name__)
 
