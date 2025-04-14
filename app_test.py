@@ -82,7 +82,8 @@ def submit():
 
             logging.info("🆕 New query detected. Clearing session and reclassifying.")
             del session["assigned_agent"]
-            session.clear()
+            #session.clear()
+            clear_session_keep_user()
             
         # If a session is ongoing, use the same agent (Agent A or B)
         if "assigned_agent" in session:
@@ -92,13 +93,15 @@ def submit():
         # If a new query is detected, reset the session
         if session.get("conversation_ended", False):
             logging.info("New query detected. Resetting session...")
-            session.clear()
+            #session.clear()
+            clear_session_keep_user()
         
         # Classify the query (Master Agent)
         classification = classify_query(user_query)
         logging.info(f"Master Agent classified the query as: {classification}")
         
-        session.clear()
+        #session.clear()
+        clear_session_keep_user()
         session["conversation_ended"] = False  # Ensure conversation tracking resets
         
         if classification == "A":
@@ -138,7 +141,8 @@ def submit():
             return jsonify({"retry_error": RETRY_ERROR}), 500
         
     except Exception as e:
-        session.clear()
+        #session.clear()
+        clear_session_keep_user()
         logging.error(f"Error in submit route: {e}")
         return jsonify({"error": GENERAL_ERROR}), 500
 
@@ -243,7 +247,8 @@ def submit_response(user_response):
         return jsonify({"error": "Unexpected behavior. Please state your query."}), 500
     
     except Exception as e:
-        session.clear()
+        #session.clear()
+        clear_session_keep_user()
         logging.error(f"Error in submit_response route: {e}")
         return jsonify({"error": GENERAL_ERROR}), 500
 
@@ -315,12 +320,19 @@ def final_result(agent, answer=None):
             return jsonify({"error": "Unexpected behavior. No valid agent assigned."}), 500
         
     except Exception as e:
-        session.clear()
+        #session.clear()
+        clear_session_keep_user()
         logging.error(f"Error in final_result function: {e}")
         return jsonify({"error": GENERAL_ERROR}), 500
 
 print("🔍 Registered Routes:")
 print(app.url_map)
+
+def clear_session_keep_user():
+    user = session.get('user')  
+    session.clear()             
+    if user:
+        session['user'] = user 
 
 if __name__ == "__main__":
     app.run(debug=True)
