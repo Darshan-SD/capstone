@@ -5,6 +5,12 @@ from controllers.utils import filter_records_by_topics_and_user_level, find_rele
 from flask import request, jsonify, render_template, session
 import logging
 from query_data import query_rag
+#auth setup
+from auth import init_auth_extensions
+from auth.routes import auth_bp
+
+init_auth_extensions(app)
+app.register_blueprint(auth_bp)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -15,6 +21,44 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+# @app.route('/login', methods=['GET', 'POST'])
+# def login():
+#     if request.method == 'POST':
+#         print(request.form)
+#         email = request.form['email']
+#         password = request.form['password']
+#         print("Login Details:", email, password)
+#         # user = users_db.get(email)
+#         # if user and user['password'] == password:
+#         #     session['user'] = user
+#         #     return redirect('/')
+#         # else:
+#         #     return "Invalid credentials", 401
+#     return render_template('login.html')
+
+# @app.route('/register', methods=['GET', 'POST'])
+# def register():
+#     if request.method == 'POST':
+#         name = request.form['name']
+#         email = request.form['email']
+#         password = request.form['password']
+#         print("Registration Details:", name, email, password)
+#         # if password != confirm_password:
+#         #     return "Passwords do not match", 400
+#         # if email in users_db:
+#         #     return "Email already exists", 400
+
+#         # users_db[email] = {'name': name, 'email': email, 'password': password}
+#         # session['user'] = users_db[email]
+#         # return redirect('/')
+#     return render_template('register.html')
+
+# @app.route('/logout')
+# def logout():
+#     session.pop('user', None)
+#     return redirect('/')
 
 @app.route("/submit", methods=["POST"])
 def submit():
@@ -274,6 +318,9 @@ def final_result(agent, answer=None):
         session.clear()
         logging.error(f"Error in final_result function: {e}")
         return jsonify({"error": GENERAL_ERROR}), 500
+
+print("🔍 Registered Routes:")
+print(app.url_map)
 
 if __name__ == "__main__":
     app.run(debug=True)

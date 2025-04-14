@@ -12,6 +12,8 @@ load_dotenv()
 app = Flask(__name__)
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+
 
 
 # Constants
@@ -56,6 +58,13 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = False
 app.config["SESSION_REDIS"] = redis.Redis(host="localhost", port=6379, db=0)
 app.config["SESSION_KEY_PREFIX"] = "session:" 
+
+#Database config
+#SECRET_KEY = os.getenv('SECRET_KEY')
+app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
+app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
+app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
+app.config['MYSQL_DB'] = os.getenv('MYSQL_DB')
 
 
 Session(app)  # Initialize session extension
