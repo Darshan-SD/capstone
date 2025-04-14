@@ -267,7 +267,7 @@ def final_result(agent, answer=None):
         elif agent == "B":
             avg_score = sum(s["score"] for s in session["scores"]) / len(session["scores"])
             user_level = "Beginner" if avg_score < 2 else "Intermediate" if avg_score < 3.5 else "Advanced"
-            summary = agent_b_summarize_learning(session["responses"], session["user_availability"])
+            summary = agent_b_summarize_learning(session["responses"], session["user_availability"], session["query"])
             key_elements = agent_b_extract_key_elements(summary,user_level)
             logging.info(f"User level: {user_level}")
         
