@@ -292,7 +292,7 @@ document.addEventListener("DOMContentLoaded", function () {
             addMessage(`${data.result}`, "bot");
         }
         else if (data.result) {  // ✅ Agent A's Response
-            addMessage(`✅ ${data.result}`, "bot");
+            addMessage(`${data.result}`, "bot");
         }
         console.log(data);
         if (data.retry_error) {

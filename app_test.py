@@ -266,9 +266,9 @@ def final_result(agent, answer=None):
                 return jsonify({
                 "final_response": False,
                 "greeting": False,
-                "result": f"✅ Agent A: {answer["response"]}",
+                "result": f"{answer["response"]}",
                 "answer_options": answer["suggested_answer"]})  # Return Agent A's final result
-
+#✅ Agent A:
         elif agent == "B":
             avg_score = sum(s["score"] for s in session["scores"]) / len(session["scores"])
             user_level = "Beginner" if avg_score < 2 else "Intermediate" if avg_score < 3.5 else "Advanced"
