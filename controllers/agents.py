@@ -51,6 +51,7 @@ def classify_query(user_query):
 
         # ---------------- OPENROUTER LLM -----------------
         response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("master", master_prompt))
+        print(response.json())
         if response.status_code == 200:
             response_data = response.json()["choices"][0]["message"]["content"]
             response_data = json.loads(response_data)

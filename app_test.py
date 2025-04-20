@@ -314,6 +314,7 @@ def final_result(agent, answer=None):
                 "rag_response": rag_response[0],
                 "sources": rag_response[1],
                 "sources_links": rag_response[2],
+                "sources_title": rag_response[4],
             })
 
         else:
