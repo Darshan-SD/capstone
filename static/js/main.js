@@ -6,11 +6,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const darkModeToggle = document.getElementById("darkModeToggle");
     const userInputField = document.getElementById("userInput");
     const submitBtn = document.getElementById("submitBtn");
+    let newRagData;
     let chatInput;
 
     function switchToChatMode(userMessage) {
         if (!userMessage) return;
-        
+
         firstTimeUI.classList.add("hidden");
         chatContainer.classList.remove("hidden");
 
@@ -137,30 +138,150 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // ✅ Display RAG Response
             if (data.rag_response) {
-                let formattedResponse = `<div class="response-container">`;
-                if (data.rag_response.course_title) {
-                    formattedResponse += `<h4>${data.rag_response.course_title}</h4>`;
-                }
-                if (data.rag_response.introduction) {
-                    formattedResponse += `<p><strong>Introduction:</strong> ${data.rag_response.introduction}</p>`;
-                }
+                let ragContainerId = `rag-response-${Date.now()}`;
+                newRagData = data.rag_response;
+                console.log("New RAG Data: ", newRagData);
+                // Build HTML
+                let formattedResponse = `
+                        <div id="${ragContainerId}" class="response-container rounded p-4 relative">
+                            <div class="flex justify-end space-x-2 mb-2">
+                                <button id="editBtn" class="edit-button bg-blue-500 text-white text-sm px-2 py-1 rounded hover:bg-blue-600 transition">
+                                    Edit
+                                </button>
+                            </div>
+                            ${data.rag_response.course_title ? `<h4>${data.rag_response.course_title}</h4>` : ""}
+                            ${data.rag_response.introduction ? `<p><strong>Introduction:</strong> ${data.rag_response.introduction}</p>` : ""}
+                        `;
                 if (data.rag_response.weeks && Array.isArray(data.rag_response.weeks)) {
-                    formattedResponse += `<h3 class="section-title">Course Outline:</h3>`;
+                    formattedResponse += `<h3 class="section-title">Course Outline:</h3><div id="weeksContainer">`;
                     data.rag_response.weeks.forEach((week, index) => {
                         formattedResponse += `
-                  <div class="week-container">
-                    <h3>Week ${week.week}: ${week.title}</h3>
-                    <p><strong>Description:</strong> ${week.description}</p>
-                    <p><strong>Key Takeaways:</strong> ${week.key_takeaways?.join(", ") || "N/A"}</p>
-                    <p><strong>Suggested Exercises:</strong> ${week.suggested_exercises || "N/A"}</p>
-                    <p><a href="${week.url}" target="_blank" class="resource-link">More Info</a></p>
-                  </div>
-                `;
+                          <div class="week-container border p-3 my-2 relative rounded bg-white">
+                            <button class="remove-week flag-remove hidden absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600" data-index="${index}">Remove</button>
+                            <h3>Week ${week.week}: ${week.title}</h3>
+                            <p><strong>Description:</strong> ${week.description}</p>
+                            <p><strong>Key Takeaways:</strong> ${week.key_takeaways?.join(", ") || "N/A"}</p>
+                            <p><strong>Suggested Exercises:</strong> ${week.suggested_exercises || "N/A"}</p>
+                            <p><a href="${week.url}" target="_blank" class="resource-link">More Info</a></p>
+                          </div>
+                          <div class="add-week-container text-center my-2">
+                            <button class="add-week hidden bg-green-500 text-white text-xs px-2 py-1 rounded hover:bg-green-600" data-index="${index + 1}">+ ADD</button>
+                          </div>
+                        `;
                     });
                 }
-                formattedResponse += `</div>`;
+                formattedResponse += `
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4 hidden" id="editControls">
+                        <button id="cancelEdit" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Cancel</button>
+                        <button id="submitEdit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Submit</button>
+                    </div>
+                </div>
+                `;
                 addMessage(formattedResponse, "bot", true);
+                // Add interactivity
+                setTimeout(() => {
+                    const ragBox = document.getElementById(ragContainerId);
+
+                    // Edit functionality
+                    const editBtn = ragBox.querySelector("#editBtn");
+                    const cancelBtn = ragBox.querySelector("#cancelEdit");
+                    const submitBtn = ragBox.querySelector("#submitEdit");
+                    const editControls = ragBox.querySelector("#editControls");
+
+                    // Add functionality
+                    const addBtns = ragBox.querySelectorAll(".add-week");
+                    const removeAddWeekBtns = ragBox.querySelectorAll(".remove-week");
+
+                    editBtn.addEventListener("click", function () {
+                        ragBox.classList.add("bg-green-100");
+                        editBtn.classList.add("hidden");
+                        editControls.classList.remove("hidden");
+                        enableWeekButtons();
+                    });
+
+                    cancelBtn.addEventListener("click", function () {
+                        ragBox.classList.remove("bg-green-100");
+                        editBtn.classList.remove("hidden");
+                        editControls.classList.add("hidden");
+                        disableWeekButtons();
+                    });
+
+                    submitBtn.addEventListener("click", function () {
+                        ragBox.classList.remove("bg-green-100");
+                        editBtn.classList.remove("hidden");
+                        editControls.classList.add("hidden");
+                        disableWeekButtons();
+                        // handle submit action here, if needed
+                    });
+
+                    function enableWeekButtons() {
+                        removeAddWeekBtns.forEach((btn) => btn.classList.remove("hidden"));
+                        addBtns.forEach((btn) => btn.classList.remove("hidden"));
+
+                        removeAddWeekBtns.forEach((btn, index) => {
+                            btn.addEventListener("click", function () {
+                                const weekContainer = btn.closest(".week-container");
+                                if (btn.classList.contains("flag-remove")) {
+                                    weekContainer.classList.add("bg-red-100");
+                                    weekContainer.classList.remove("bg-white");
+                                    btn.classList.remove("flag-remove");
+                                    btn.classList.remove("bg-red-500");
+                                    btn.classList.add("bg-green-500");
+                                    btn.classList.add("flag-add");
+                                    btn.innerHTML = "Add Again";
+                                    newRagData.weeks[index].isRemoved = true;
+                                }
+                                else if (btn.classList.contains("flag-add")) {
+                                    weekContainer.classList.add("bg-white");
+                                    weekContainer.classList.remove("bg-red-100");
+                                    btn.classList.remove("flag-add");
+                                    btn.classList.remove("bg-green-500");
+                                    btn.classList.add("bg-red-500");
+                                    btn.classList.add("flag-remove");
+                                    btn.innerHTML = "Remove";
+                                    newRagData.weeks[index].isRemoved = false;
+                                }
+                                console.log("Updated weeks data: ", newRagData.weeks);
+                            });
+                        });
+
+                        // Ensure each "Add" button works only once
+                        addBtns.forEach((btn) => {
+                            if (!btn.hasListener) {
+                                btn.addEventListener("click", function () {
+                                    const newWeek = document.createElement("div");
+                                    newWeek.classList.add("week-container", "border", "p-3", "my-2", "relative", "rounded", "bg-white");
+                                    newWeek.innerHTML = `
+                                        <button class="remove-week flag-add-btn-remove absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600">Remove</button>
+                                        <h3>New Week</h3>
+                                        <textarea class="w-full h-24 border rounded p-2" placeholder="Enter week description..."></textarea>
+                                    `;
+
+                                    const addContainer = btn.closest(".add-week-container");
+                                    addContainer.insertAdjacentElement("beforebegin", newWeek);
+
+                                    // const newAdd = addContainer.cloneNode(true);
+                                    // addContainer.insertAdjacentElement("afterend", newAdd);
+
+                                    // Re-enable event listeners for new "Add" buttons
+                                    enableWeekButtons();
+                                });
+
+                                // Mark that the listener has been added to this button
+                                btn.hasListener = true;
+                            }
+                        });
+                    }
+
+                    function disableWeekButtons() {
+                        removeAddWeekBtns.forEach((btn) => btn.classList.add("hidden"));
+                        addBtns.forEach((btn) => btn.classList.add("hidden"));
+                    }
+                }, 100);
             }
+
+
 
             // ✅ Display Sources Links
             if (data.sources_links && data.sources_title) {
@@ -171,7 +292,7 @@ document.addEventListener("DOMContentLoaded", function () {
             addMessage(`${data.result}`, "bot");
         }
         else if (data.result) {  // ✅ Agent A's Response
-            addMessage(`✅ ${data.result}`, "bot");
+            addMessage(`${data.result}`, "bot");
         }
         console.log(data);
         if (data.retry_error) {
@@ -179,7 +300,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         }
 
-        if(data.error) {
+        if (data.error) {
             addMessage(data.error, "bot");
         }
 
@@ -215,13 +336,13 @@ document.addEventListener("DOMContentLoaded", function () {
         const botMessages = document.querySelectorAll('.message-container-bot');
         const userMessages = document.querySelectorAll('.message-container-user');
         if (botMessages.length > 0) {
-          botMessages[botMessages.length - 1].remove();
+            botMessages[botMessages.length - 1].remove();
         }
         if (userMessages.length > 0) {
-          userMessages[userMessages.length - 1].remove();
+            userMessages[userMessages.length - 1].remove();
         }
-      }
-      
+    }
+
 
     submitBtn.addEventListener("click", function () {
         const userMessage = userInputField.value.trim();

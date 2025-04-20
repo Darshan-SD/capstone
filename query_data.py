@@ -11,6 +11,7 @@ from get_embedding_function import get_embedding_function
 from config import llm_agent_b, RETRY_ERROR
 import random
 import logging
+from flask import session
 
 CHROMA_PATH = "chroma"
 load_dotenv()
@@ -110,7 +111,8 @@ def query_rag(query_text: str, relevant_doc_ids: list):
           if meta.get("id") in relevant_doc_ids
       ]
       print(f"\nFiltered {len(filtered_docs)} documents.")
-
+      print(f"\n Docs Filtered: {filtered_docs}")
+      session["filteredDocs"] = serialize_filtered_docs_for_llm(filtered_docs)
       # Construct context text
       context_text = "\n\n---\n\n".join([doc[0].page_content for doc in filtered_docs])
 
@@ -127,8 +129,8 @@ def query_rag(query_text: str, relevant_doc_ids: list):
         # return {"rag_error": RETRY_ERROR}
       # else:
       # Invoke LLM
-      response_text = llm.invoke(prompt) if llm_agent_b else "LLM not initialized."
-
+      #response_text = llm_agent_b.invoke(prompt) if llm_agent_b else "LLM not initialized."
+      response_text = llm.invoke(prompt) if llm else "LLM not initialized."
       if "```" in response_text:
           response_text = response_text.split("```json")[1].split("```")[0].strip()
 
@@ -162,4 +164,13 @@ def query_rag(query_text: str, relevant_doc_ids: list):
 
     return response_text, sources_id, sources_links, filtered_docs, sources_title
 
+def serialize_filtered_docs_for_llm(filtered_docs):
+    return [
+        {
+            "metadata": doc.metadata,
+            "page_content": doc.page_content,
+            "score": score
+        }
+        for doc, score in filtered_docs
+    ]
 # query_rag()

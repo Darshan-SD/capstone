@@ -1,4 +1,6 @@
 from config import MIN_QUESTIONS, MAX_QUESTIONS
+import json
+from textwrap import dedent
 
 # Agents Prompts
 def master_prompt_function(user_query):
@@ -498,5 +500,176 @@ def extract_key_elements_prompt(summary, user_level):
     "{summary}"
     Include the user's level: {user_level}.
     Provide only the key elements as a comma-separated list.
+    """
+    return prompt
+
+def check_is_regenerate_query_prompt(user_input):
+    prompt = f"""
+    You are a classification assistant.
+
+    The user was previously given a personalized learning plan. Now, they entered the following message:
+
+    "{user_input}"
+
+    Your task: determine if the user is trying to regenerate, adjust, or modify the existing plan (like changing weeks, removing topics, or asking for updates).
+
+    Respond with only one word: "Yes" or "No".
+    """
+    return prompt
+
+# def regenerate_query_prompt(existing_plan, user_input, filtered_docs, key_elements):
+#     prompt = f"""
+#     You are a course planning assistant. A learning plan has already been generated for the user.
+
+#     Here is the existing plan (JSON format):
+#     {existing_plan}
+
+#     The user has asked to modify it with the following instruction:
+#     "{user_input}"
+
+#     Only use the resources listed below. These were selected based on the user’s level and learning goals:  
+#     {filtered_docs}  
+#     Do **not** invent any resources. If no relevant resource is found for a required topic, add a `"note": "No relevant resource found"` in its place.
+
+#     **Remember key topics**  
+#     The user intends to learn these key elements: {key_elements}
+
+#     Please modify the course accordingly. Keep the JSON structure the same.
+#     ONLY return valid JSON.
+
+#     If something is unclear, still do your best based on the available information.
+#     """
+#     return prompt
+
+
+
+def regenerate_query_prompt(existing_plan, user_input, filtered_docs, key_elements):
+    existing_plan_json = json.dumps(existing_plan, indent=2)
+    docs_for_prompt = json.dumps(filtered_docs, indent=2)
+    key_elements_str = ", ".join(key_elements)
+
+    prompt = dedent(f"""
+        You are a highly capable course planning assistant. Your task is to modify an **existing JSON-formatted course plan** based on the **user's exact request**.
+
+        You will receive:
+        - The original course plan
+        - The user's modification request
+        - A list of filtered learning resources
+        - The user’s target learning topics
+
+        Your job is to carefully revise the course plan according to the instructions — no more, no less.
+
+        ---
+       
+
+        ### 🧠 Think step by step:
+
+        1. **Understand the original course plan**  
+        {existing_plan_json}
+
+        2. **Understand the user request**  
+        "{user_input}"
+
+        ### 🚨 STRICT CONSTRAINT (MUST FOLLOW):
+
+        - If the user says things like **"make it 3 weeks"**, **"limit to 4 weeks"**, or **"change this to 2 weeks"**, then the final plan must include **EXACTLY that number of weeks** — not more, not fewer.
+        - This is a **mandatory hard constraint** — do **not** exceed or reduce the number of weeks.
+        - Do **not** assume extra content.
+        - If no number of weeks is specified, keep the current number of weeks from the existing plan.
+        
+        **IMPORTANT RULE**:
+        If the user explicitly specifies a number of weeks (e.g., "change this to 3 weeks", "make it 5 weeks"), you **must** return exactly that number of weeks — **not more, not fewer**.  
+        Do not assume additional content unless the user has asked for it.  
+        This is a **hard constraint**, not a suggestion.
+
+        If the user did **not** mention a number of weeks, **Go with weeks in the existing plan**.
+
+        3. **Use only these filtered resources**  
+        {docs_for_prompt}
+
+        Do **not** hallucinate or invent resources. If a relevant topic has no matching resource, insert:  
+        `"note": "No relevant resource found"`
+
+        4. **Incorporate the user’s learning goals**  
+        The user is interested in the following key elements: {key_elements_str}
+
+        5. **Modify the course accordingly**
+        - Adjust week duration or count only as per user request
+        - If weeks are reduced, compress material wisely
+        - If weeks are added, distribute content logically
+        - Remove/add topics only as requested
+        - Use only the provided resources
+        - Maintain logical flow of concepts
+
+        ### Instructions:
+        - Organize resources in a logical order (beginner → advanced).
+        - Ensure the output follows **valid JSON format**.
+        - Provide a brief introduction summarizing the course.
+        - Each **week** should include:
+        - `title`: The title of the resource
+        - `description`: A short description of the resource
+        - `url`: The link to access the resource
+        - `key_takeaways`: A list of key learning points from the resource
+        - `suggested_exercises`: (Optional) Suggested exercises for hands-on learning
+
+        6. **Output Format**  
+        Return the updated plan as a **valid JSON object** in the following structure:
+
+        {{
+          "course_title": "Updated title reflecting user goal",
+          "introduction": "Updated summary (include total weeks if mentioned)",
+          "weeks": [
+            {{
+              "week": 1,
+              "title": "...",
+              "description": "...",
+              "url": "...",
+              "key_takeaways": ["...", "..."],
+              "suggested_exercises": "..."
+            }},
+            ...
+          ]
+        }}
+
+        Do NOT include markdown, explanation, or anything outside valid JSON.
+
+        **Most important: If the user limits the number of weeks, you must strictly adhere to that.**
+
+        ONLY return the revised plan in valid JSON.
+        
+        **Strictly enforce the user’s instructions**
+
+    """)
+
+    return prompt
+
+def modify_summary_prompt(existing_summary, user_input):
+    prompt = f"""
+    You are a highly skilled course planning assistant.
+
+    The user's current learning goal has already been summarized as follows:
+    "{existing_summary}"
+
+    The user has now provided a new instruction or request:
+    "{user_input}"
+
+    Your task is to revise the existing summary to reflect this new input accurately.
+
+    Please follow these steps:
+    1. Analyze the **existing summary** to understand the user's current learning objective.
+    2. Examine the **new user input** to determine whether the user:
+       - Wants to **regenerate** the plan completely
+       - Seeks to **adjust** or fine-tune the current plan (e.g., change week count, pacing, structure)
+       - Intends to **add or remove** specific topics or learning goals
+    3. Based on the new information, **rewrite the summary** to:
+       - Incorporate the user's latest goals or constraints
+       - Preserve relevant parts of the original summary
+       - Ensure clarity and conciseness
+
+    Do **not** repeat the user input verbatim.
+    Instead, **synthesize** it into a coherent and updated summary of the user's learning goal.
+    The tone should remain clear and concise.
+
+    Return only the updated summary as plain text — no bullet points, formatting, or explanations.
     """
     return prompt
