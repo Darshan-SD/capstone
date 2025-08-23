@@ -47,6 +47,7 @@ GENERAL_ERROR = "An error occurred. Please enter the query again or try reloadin
 
 # LLMs
 llm_master = Ollama(model="mistral")
+# llm_agent_a = Ollama(model="qwen2.5:3b")
 llm_agent_a = Ollama(model="mistral")
 llm_agent_b = Ollama(model="mistral")
 
