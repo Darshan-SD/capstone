@@ -154,7 +154,7 @@ def submit_response(user_response):
                 return final_result(agent="B")
             
             logging.info(f"Question Index: {question_index}")
-            logging.info(f"User Session: {len(user_session["questions"])}")
+            logging.info(f"User Session: {len(user_session['questions'])}")
 
             if question_index >= len(user_session["questions"]):
                 return jsonify({"error": "Invalid question index."}), 400
@@ -223,7 +223,7 @@ def final_result(agent, answer=None):
                 return jsonify({
                 "final_response": False,
                 "greeting": False,
-                "result": f"✅ Agent A: {answer["response"]}",
+                "result": f"✅ Agent A: {answer['response']}",
                 "answer_options": answer["suggested_answer"]})  # Return Agent A's final result
 
         elif agent == "B":
