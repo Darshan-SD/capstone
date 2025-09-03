@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  {% block stylesheet %}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
+  {% endblock stylesheet %}
+  <title>Login</title>
+</head>
+<body class="text-white flex justify-center items-center h-screen">
+    {% include 'navbar.html' %}
+    {% include 'background.html' %}
+    <div class="pt-20 flex justify-center items-center min-h-screen text-white">
+      <form action="/login" method="POST" class="account-container p-8 rounded-lg w-full max-w-sm text-black">
+        <h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
+        <input type="email" name="email" placeholder="Email" required pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+               class="w-full p-2 mb-4 rounded text-black" />
+        <input type="password" name="password" placeholder="Password" required pattern=".{6,}"
+               class="w-full p-2 mb-6 rounded text-black" />
+        <button type="submit" class="w-full p-2 rounded text-white bg-black hover:bg-gray-800">Submit</button>
+      </form>
+    </div>
+</body>
+</html>

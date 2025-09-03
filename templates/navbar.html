@@ -1,0 +1,19 @@
+{% block stylesheet %}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
+{% endblock stylesheet %}
+
+<div
+    class="navbar-container w-full flex justify-between items-center p-4 text-black fixed top-0 left-0 z-50">
+    <a href="{{ url_for('index') }}" class="text-xl font-bold">
+        AI Tutor
+    </a>
+    <div class="navbar">
+        {% if session.get('user') %}
+        <span class="mr-4">Hi, {{ session['user']['name'] }}</span>
+        <a href="{{ url_for('logout') }}" class="px-4 py-2 bg-red-500 rounded hover:bg-red-600">Logout</a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="px-4 py-2 mr-2 rounded-lg">Login</a>
+        <a href="{{ url_for('register') }}" class="px-4 py-2 rounded-lg">Sign Up</a>
+        {% endif %}
+    </div>
+</div>

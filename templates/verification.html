@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <title>Verify OTP</title>
+</head>
+<body class="bg-black text-white flex justify-center items-center h-screen">
+  <form id="otpForm" class="bg-gray-800 p-6 rounded-lg shadow-lg w-96">
+    <h2 class="text-2xl font-bold mb-6 text-center">OTP Verification</h2>
+    <input type="text" name="otp" placeholder="Enter OTP" required pattern="\d{6}"
+      class="w-full mb-6 px-3 py-2 rounded bg-gray-700 text-white focus:outline-none" />
+    <button type="submit"
+      class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded">Verify</button>
+  </form>
+
+  <script>
+    document.getElementById("otpForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const otp = this.otp.value;
+      const email = localStorage.getItem("email");
+      const response = await fetch("/api/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert("Account verified! You can now log in.");
+        window.location.href = "/login";
+      } else {
+        alert(result.message || "OTP verification failed.");
+      }
+    });
+  </script>
+</body>
+</html>

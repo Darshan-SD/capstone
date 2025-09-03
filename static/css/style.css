@@ -2,6 +2,43 @@ body {
     padding: 0
 }
 
+/* Navbar */
+.navbar a{
+    background-color: rgba(255, 255, 255, 0.5);
+    border-top: 0.5px solid white;
+    border-left: 0.5px solid white;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+.navbar a:hover{
+    background-color: white;
+    transform: translateY(-3%);
+    scale: 1.05;
+    box-shadow: 5px 5px 13px rgba(0, 0, 0, 0.3);
+}
+
+/* Login */
+.account-container{
+    background-color: rgba(255, 255, 255, 0.5);
+    border-top: 0.5px solid white;
+    border-left: 0.5px solid white;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+}
+.account-container input{
+    background-color: transparent;
+    border: none;
+    border-top: 0.5px solid white;
+    border-left: 0.5px solid white;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    outline: none !important;
+}
+
+/* Chat */
 .message-container-user{
     display: flex;
     justify-content: flex-end;
