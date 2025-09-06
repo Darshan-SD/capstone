@@ -45,23 +45,6 @@ def add_to_chroma(documents: list[Document], df: pd.DataFrame):
     print(f"Existing IDs: {existing_ids}")
 
     new_documents = []
-    # for doc in documents:
-    #     doc_id = hash(doc.page_content)
-    #     topics = json.loads(doc.page_content)["Topic"] 
-    #     difficulty_level = json.loads(doc.page_content)["Difficulty Level"]
-
-    #     print(f"Doc: {doc}")
-    #     print(f"Checking doc_id: {doc_id}")
-    #     print(f"Type of page_content: {type(doc.page_content)}")
-    #     print(f"\n\n\nPage Content: {json.loads(doc.page_content)["Topic"]}\n\n\n")
-
-    #     if doc_id not in existing_ids:
-    #         print("In")
-    #         doc.metadata["id"] = doc_id
-    #         doc.metadata["topics"] = topics
-    #         doc.metadata["difficulty_level"] = difficulty_level
-    #         new_documents.append(doc)
-    #         df.at[doc.metadata["row_index"], "doc_id"] = str(doc_id)
 
     for doc in documents:
         if not doc.page_content.strip():  # Avoid empty or blank content

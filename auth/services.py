@@ -16,6 +16,8 @@ from auth.models import find_user_by_email, create_user
 #     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
 #     create_user(name, email, hashed_pw)
 #     return redirect('/login')
+print("-------------------------------------------", jwt.__file__)
+print("-------------------------------------------", dir(jwt))
 
 def handle_signup(data):
     name = data['name']

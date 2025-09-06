@@ -43,23 +43,23 @@ def classify_query(user_query):
     try:
         master_prompt = master_prompt_function(user_query)
         # ---------------- LOCAL LLM --------------------
-        # response = llm_master.invoke(master_prompt).strip()
-        # logging.info(f"Master Agent raw response: '{response}'")
-        # response_data = json.loads(response)
-        # classification = response_data.get("category", "Unknown")
+        response = llm_master.invoke(master_prompt).strip()
+        logging.info(f"Master Agent raw response: '{response}'")
+        response_data = json.loads(response)
+        classification = response_data.get("category", "Unknown")
         # ---------------- LOCAL LLM --------------------
 
         # ---------------- OPENROUTER LLM -----------------
-        response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("master", master_prompt))
-        print(response.json())
-        if response.status_code == 200:
-            response_data = response.json()["choices"][0]["message"]["content"]
-            response_data = json.loads(response_data)
-            logging.info(f"(OPEN ROUTER) Master Agent raw response: '{response_data}'")
-            classification = response_data.get("category", "Unknown")
-        else:
-            logging.error(f"(OPEN ROUTER) Master Agent API call failed: {response.status_code} - {response.text}")
-            classification = "Unknown"
+        # response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("master", master_prompt))
+        # print(response.json())
+        # if response.status_code == 200:
+        #     response_data = response.json()["choices"][0]["message"]["content"]
+        #     response_data = json.loads(response_data)
+        #     logging.info(f"(OPEN ROUTER) Master Agent raw response: '{response_data}'")
+        #     classification = response_data.get("category", "Unknown")
+        # else:
+        #     logging.error(f"(OPEN ROUTER) Master Agent API call failed: {response.status_code} - {response.text}")
+        #     classification = "Unknown"
         # ---------------- OPENROUTER LLM -----------------
 
     except Exception as e:
@@ -85,19 +85,19 @@ def agent_a_answer(user_query):
         logging.info(f"Agent A prompt: {prompt}")
 
         # ---------------- LOCAL LLM --------------------
-        # response = llm_agent_a.invoke(prompt).strip()
-        # response = json.loads(response)
+        response = llm_agent_a.invoke(prompt).strip()
+        response = json.loads(response)
         # ---------------- LOCAL LLM --------------------
 
         # ---------------- OPENROUTER LLM -----------------
-        response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("a", prompt))
-        if response.status_code == 200:
-            response = response.json()["choices"][0]["message"]["content"]
-            response = json.loads(response)
-            logging.info(f"(OPEN ROUTER) Agent A raw response: '{response}'")
-        else:
-            logging.error(f"(OPEN ROUTER) Agent A failed to provide a response: {response.status_code} - {response.text}")
-            return {"agent_a_error": RETRY_ERROR}
+        # response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("a", prompt))
+        # if response.status_code == 200:
+        #     response = response.json()["choices"][0]["message"]["content"]
+        #     response = json.loads(response)
+        #     logging.info(f"(OPEN ROUTER) Agent A raw response: '{response}'")
+        # else:
+        #     logging.error(f"(OPEN ROUTER) Agent A failed to provide a response: {response.status_code} - {response.text}")
+        #     return {"agent_a_error": RETRY_ERROR}
         # ---------------- OPENROUTER LLM -----------------
         
     except Exception as e:
@@ -118,21 +118,21 @@ def agent_b_followup(context):
         logging.info(f"\n\n\nAgent B follow-up prompt: {prompt}\n\n\n")
 
         # ---------------- LOCAL LLM --------------------
-        # response = llm_agent_b.invoke(prompt).strip()
-        # if "```" in response:
-        #     response = response.split("```json")[1].split("```")[0].strip()
-        # response = json.loads(response)
+        response = llm_agent_b.invoke(prompt).strip()
+        if "```" in response:
+            response = response.split("```json")[1].split("```")[0].strip()
+        response = json.loads(response)
         # ---------------- LOCAL LLM --------------------
 
         # ---------------- OPENROUTER LLM -----------------
-        response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
-        if response.status_code == 200:
-            response = response.json()["choices"][0]["message"]["content"]
-            response = json.loads(response)
-            logging.info(f"(OPEN ROUTER) Agent B Followup raw response: '{response}'")
-        else:
-            logging.error(f"(OPEN ROUTER) Agent B Followup failed to provide a response: {response.status_code} - {response.text}")
-            return {"agent_b_error": RETRY_ERROR}
+        # response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
+        # if response.status_code == 200:
+        #     response = response.json()["choices"][0]["message"]["content"]
+        #     response = json.loads(response)
+        #     logging.info(f"(OPEN ROUTER) Agent B Followup raw response: '{response}'")
+        # else:
+        #     logging.error(f"(OPEN ROUTER) Agent B Followup failed to provide a response: {response.status_code} - {response.text}")
+        #     return {"agent_b_error": RETRY_ERROR}
         # ---------------- OPENROUTER LLM -----------------
 
     except Exception as e:
@@ -158,19 +158,19 @@ def agent_b_score_response(response, question, question_count):
     logging.info(f"\n\n\nUser Response with Question: {response, question}\n\n\n")
 
     # ---------------- LOCAL LLM --------------------
-    # result = llm_agent_b.invoke(prompt).strip()
-    # result_data = json.loads(result)
+    result = llm_agent_b.invoke(prompt).strip()
+    result_data = json.loads(result)
     # ---------------- LOCAL LLM --------------------
 
     # ---------------- OPENROUTER LLM -----------------
-    result = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
-    if result.status_code == 200:
-        result = result.json()["choices"][0]["message"]["content"]
-        result_data = json.loads(result)
-        logging.info(f"(OPEN ROUTER) Agent B Score response: '{result_data}'")
-    else:
-        logging.error(f"(OPEN ROUTER) Agent B Score failed to provide a response: {result.status_code} - {result.text}")
-        return {"agent_b_error": RETRY_ERROR}
+    # result = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
+    # if result.status_code == 200:
+    #     result = result.json()["choices"][0]["message"]["content"]
+    #     result_data = json.loads(result)
+    #     logging.info(f"(OPEN ROUTER) Agent B Score response: '{result_data}'")
+    # else:
+    #     logging.error(f"(OPEN ROUTER) Agent B Score failed to provide a response: {result.status_code} - {result.text}")
+    #     return {"agent_b_error": RETRY_ERROR}
      # ---------------- OPENROUTER LLM -----------------
 
     logging.info(f"Scored Response: {result_data}")
@@ -184,18 +184,18 @@ def agent_b_summarize_learning(responses, user_availability, query):
     prompt = agent_b_summarize_learning_prompt(responses, user_availability, query)
 
     # ---------------- LOCAL LLM --------------------
-    # summary = llm_agent_b.invoke(prompt).strip()
+    summary = llm_agent_b.invoke(prompt).strip()
     # ----------------- LOCAL LLM --------------------
 
     # ---------------- OPENROUTER LLM -----------------
-    result = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
-    if result.status_code == 200:
-        result = result.json()["choices"][0]["message"]["content"]
-        summary = json.loads(result)
-        logging.info(f"(OPEN ROUTER) Agent B Summerize raw response: '{summary}'")
-    else:
-        logging.error(f"(OPEN ROUTER) Agent B Summerize failed to provide a response: {result.status_code} - {result.text}")
-        return {"agent_b_error": RETRY_ERROR}
+    # result = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
+    # if result.status_code == 200:
+    #     result = result.json()["choices"][0]["message"]["content"]
+    #     summary = json.loads(result)
+    #     logging.info(f"(OPEN ROUTER) Agent B Summerize raw response: '{summary}'")
+    # else:
+    #     logging.error(f"(OPEN ROUTER) Agent B Summerize failed to provide a response: {result.status_code} - {result.text}")
+    #     return {"agent_b_error": RETRY_ERROR}
      # ---------------- OPENROUTER LLM -----------------
 
     logging.info(f"Generated User Learning Summary: {summary}")
@@ -209,21 +209,21 @@ def agent_b_extract_key_elements(summary,user_level):
     prompt = agent_b_extract_key_elements_prompt(user_level, summary)
 
     # ---------------- LOCAL LLM --------------------
-    # key_elements_response = llm_agent_b.invoke(prompt).strip()
-    # key_elements = key_elements_response.split(", ")  # Convert response into a list
-    # logging.info(f"Extracted Key Elements: {key_elements}")
+    key_elements_response = llm_agent_b.invoke(prompt).strip()
+    key_elements = key_elements_response.split(", ")  # Convert response into a list
+    logging.info(f"Extracted Key Elements: {key_elements}")
     # ---------------- LOCAL LLM --------------------
 
     # ---------------- OPENROUTER LLM -----------------
-    result = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
-    if result.status_code == 200:
-        key_elements_response = result.json()["choices"][0]["message"]["content"]
-        key_elements = key_elements_response.split(", ")  # Convert response into a list
-        # key_elements = json.loads(result)
-        logging.info(f"(OPEN ROUTER) Agent B Extract Key Elements raw response: '{key_elements}'")
-    else:
-        logging.error(f"(OPEN ROUTER) Agent B Extract Key Elements failed to provide a response: {result.status_code} - {result.text}")
-        return {"agent_b_error": RETRY_ERROR}
+    # result = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
+    # if result.status_code == 200:
+    #     key_elements_response = result.json()["choices"][0]["message"]["content"]
+    #     key_elements = key_elements_response.split(", ")  # Convert response into a list
+    #     # key_elements = json.loads(result)
+    #     logging.info(f"(OPEN ROUTER) Agent B Extract Key Elements raw response: '{key_elements}'")
+    # else:
+    #     logging.error(f"(OPEN ROUTER) Agent B Extract Key Elements failed to provide a response: {result.status_code} - {result.text}")
+    #     return {"agent_b_error": RETRY_ERROR}
      # ---------------- OPENROUTER LLM -----------------
 
     return key_elements
@@ -237,20 +237,20 @@ def respond_greeting(user_query):
     greeting_prompt = response_greeting_prompt(topics_str, user_query)
 
     # ---------------- LOCAL LLM --------------------
-    # greeting_response = llm_master.invoke(greeting_prompt).strip()
-    # greeting_response = json.loads(greeting_response)
-    # logging.info(f"Greeting response generated: '{greeting_response}'")
+    greeting_response = llm_master.invoke(greeting_prompt).strip()
+    greeting_response = json.loads(greeting_response)
+    logging.info(f"Greeting response generated: '{greeting_response}'")
     # ---------------- LOCAL LLM --------------------
 
     # ---------------- OPENROUTER LLM -----------------
-    response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("master", greeting_prompt))
-    if response.status_code == 200:
-        greeting_response = response.json()["choices"][0]["message"]["content"]
-        greeting_response = json.loads(greeting_response)
-        logging.info(f"(OPEN ROUTER) Greetings raw response: '{greeting_response}'")
-    else:
-        logging.error(f"(OPEN ROUTER) Master Agent(Greetings) failed to provide a response: {response.status_code} - {response.text}")
-        return {"master_agent_error": RETRY_ERROR}
+    # response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("master", greeting_prompt))
+    # if response.status_code == 200:
+    #     greeting_response = response.json()["choices"][0]["message"]["content"]
+    #     greeting_response = json.loads(greeting_response)
+    #     logging.info(f"(OPEN ROUTER) Greetings raw response: '{greeting_response}'")
+    # else:
+    #     logging.error(f"(OPEN ROUTER) Master Agent(Greetings) failed to provide a response: {response.status_code} - {response.text}")
+    #     return {"master_agent_error": RETRY_ERROR}
     # ---------------- OPENROUTER LLM -----------------
 
     return greeting_response
@@ -262,20 +262,20 @@ def generate_availability_question():
     prompt = generate_availability_question_prompt()
 
     # ---------------- LOCAL LLM --------------------
-    # response = llm_agent_b.invoke(prompt).strip()
-    # response = json.loads(response)
-    # logging.info(f"Generated Availability Question: {response}")
+    response = llm_agent_b.invoke(prompt).strip()
+    response = json.loads(response)
+    logging.info(f"Generated Availability Question: {response}")
     # ---------------- LOCAL LLM --------------------
 
     # ---------------- OPENROUTER LLM -----------------
-    response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
-    if response.status_code == 200:
-        response = response.json()["choices"][0]["message"]["content"]
-        response = json.loads(response)
-        logging.info(f"(OPEN ROOUTER) Agent B Generate Availability Question raw response: '{response}'")
-    else:
-        logging.error(f"(OPEN ROOUTER) Agent B Generate Availability Question failed to provide a response: {response.status_code} - {response.text}")
-        return {"agent_b_error": RETRY_ERROR}
+    # response = requests.post(OPEN_ROUTER_API_URL, headers=OPEN_ROUTER_HEADERS, json=open_router_data("b", prompt))
+    # if response.status_code == 200:
+    #     response = response.json()["choices"][0]["message"]["content"]
+    #     response = json.loads(response)
+    #     logging.info(f"(OPEN ROOUTER) Agent B Generate Availability Question raw response: '{response}'")
+    # else:
+    #     logging.error(f"(OPEN ROOUTER) Agent B Generate Availability Question failed to provide a response: {response.status_code} - {response.text}")
+    #     return {"agent_b_error": RETRY_ERROR}
      # ---------------- OPENROUTER LLM -----------------
 
     return response
