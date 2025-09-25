@@ -82,7 +82,7 @@ def agent_a_answer(user_query):
     """
     try:
         prompt = agent_a_answer_prompt(user_query)
-        logging.info(f"Agent A prompt: {prompt}")
+        # logging.info(f"Agent A prompt: {prompt}")
 
         # ---------------- LOCAL LLM --------------------
         response = llm_agent_a.invoke(prompt).strip()
@@ -229,10 +229,10 @@ def agent_b_extract_key_elements(summary,user_level):
     return key_elements
 
 def respond_greeting(user_query):
-    logging.info("Master Agent detected a greeting. Generating a dynamic greeting response.")
-
     topic_dict = get_topic_ids()
     topics_str = "\n".join([f"{topic}" for topic, topic_id in topic_dict.items()])
+    logging.info(f"\n---------------------------------------------------------\nTOPIC DICT:", topic_dict)
+    logging.info(f"\n---------------------------------------------------------\nTOPIC STRING:", topics_str)
 
     greeting_prompt = response_greeting_prompt(topics_str, user_query)
 

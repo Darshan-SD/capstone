@@ -327,7 +327,6 @@ def agent_b_extract_key_elements_prompt(user_level, summary):
     return prompt
 
 def response_greeting_prompt(topics_str, user_query):
-    print(f"topics_str: {topics_str}")
     prompt = (
     "You are an AI assistant responding to a greeting message.\n\n"
     "**Objective:**\n"
@@ -347,33 +346,33 @@ def response_greeting_prompt(topics_str, user_query):
 
     "### Example JSON Response:\n"
     "{\n"
-    "  \"greeting\": \"Hi there! I'm thrilled you're here to explore the world of Machine Learning. We can chat about Supervised or Unsupervised Learning, dive into Feature Engineering, or talk about how to avoid Overfitting in your models. Let’s level up your ML knowledge!\",\n"
+    "  \"greeting\": \"Hi there! I'm thrilled you're here to explore the world of Machine Learning. What do you want to learn today?\",\n"
     "  \"suggested_quetions\": [\"What is Feature Engineering in ML?\", \"How does Overfitting impact a model?\", \"Explain Supervised Learning with examples.\", \"Tell me about Unsupervised Learning techniques.\"]\n"
     "}\n\n"
     "### Example JSON Response:\n"
     "{\n"
-    "  \"greeting\": \"Hey! Interested in Reinforcement Learning, Clustering Methods, or how to evaluate ML models effectively? We can even talk about Dimensionality Reduction or use cases for Large Language Models. Ask away!\",\n"
+    "  \"greeting\": \"Hey! What Machine Learning topic brings you here?\",\n"
     "  \"suggested_quetions\": [\"What is Reinforcement Learning in practice?\", \"Explain Dimensionality Reduction in ML.\", \"What are model evaluation metrics?\", \"Tell me about Clustering Methods.\"]\n"
     "}\n\n"
     "### Example JSON Response:\n"
     "{\n"
-    "  \"greeting\": \"Welcome! Ready to dive into ML fundamentals like Data Preprocessing, Bias-Variance Tradeoff, or the magic behind Large Language Models? We can also walk through how algorithms like Decision Trees and K-Means work. Let’s get started!\",\n"
+    "  \"greeting\": \"Welcome! What do you want to brainstorm today?\",\n"
     "  \"suggested_quetions\": [\"What is the Bias-Variance Tradeoff?\", \"How does K-Means Clustering work?\", \"Tell me about Data Preprocessing steps.\", \"What are Large Language Models?\"]\n"
     "}\n\n"
     "### Example JSON Response:\n"
     "{\n"
-    "  \"greeting\": \"Hello! I'm excited to guide you through core ML concepts like Model Evaluation, Cross-Validation, Hyperparameter Tuning, and Data Mining. Whether you're a beginner or leveling up, there’s something for you here!\",\n"
+    "  \"greeting\": \"Hello! What do you want to learn today?\",\n"
     "  \"suggested_quetions\": [\"How does Cross-Validation work?\", \"Explain Hyperparameter Tuning.\", \"What is Data Mining used for?\", \"How do we evaluate a machine learning model?\"]\n"
     "}\n\n"
     "### Example JSON Response:\n"
     "{\n"
-    "  \"greeting\": \"Hey there! Curious about ML pipelines, Neural Networks, or how to detect and handle Outliers? We can also explore Regularization techniques to improve model generalization. Just tell me what interests you most!\",\n"
+    "  \"greeting\": \"Hey there! What Artificial Intelligence topic brings you here?\",\n"
     "  \"suggested_quetions\": [\"What are ML pipelines?\", \"How does Regularization help in ML?\", \"Explain Neural Networks simply.\", \"How do you handle Outliers in data?\"]\n"
     "}\n"
 
-    "Do not suggest same topics provided in the Example JSON Response.\n"
+    "Do not suggest same questions provided in the Example JSON Response.\n"
 
-    "**Suggest 2-4 topics from the following list:**\n"
+    "**Suggest 2-4 questions from the following list:**\n"
     f"{topics_str}\n\n"
     # "### Example Responses:\n"
     # "- 'Hello! Hope you're having a great day. If you're curious about AI, I can help! Want to learn about deep learning or natural language processing?'\n"

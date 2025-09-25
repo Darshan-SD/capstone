@@ -65,13 +65,13 @@ def submit():
     try:
         data = request.json
         user_query = data.get("input")
-        logging.info(f"Received user input: {user_query}")
+        logging.info(f"\n---------------------------------------------------------\nReceived user input: {user_query}")
 
         if not user_query:
             logging.error("No input received from user.")
             return jsonify({"error": "Please enter a query."}), 400
 
-        logging.info(f"User Session: {session}")
+        logging.info(f"\n---------------------------------------------------------\nUser Session: {session}")
 
         if session.get("assigned_agent") == "B" and session.get("conversation_ended", False):
             is_regeneration_query = is_regeneration_request(user_query)
@@ -87,7 +87,7 @@ def submit():
             
         # If a session is ongoing, use the same agent (Agent A or B)
         if "assigned_agent" in session:
-            logging.info(f"Continuing session with Agent {session['assigned_agent']}.")
+            logging.info(f"\n---------------------------------------------------------\nContinuing session with Agent {session['assigned_agent']}.")
             return submit_response(user_query)
         
         # If a new query is detected, reset the session
@@ -98,7 +98,7 @@ def submit():
         
         # Classify the query (Master Agent)
         classification = classify_query(user_query)
-        logging.info(f"Master Agent classified the query as: {classification}")
+        logging.info(f"\n---------------------------------------------------------\nMaster Agent classified the query as: {classification}")
         
         #session.clear()
         clear_session_keep_user()
@@ -116,8 +116,8 @@ def submit():
                 return jsonify({"retry_error": followup_question["agent_b_error"]}), 500
             
             session["assigned_agent"] = "B"  # Store the assigned agent: B
-            logging.info(f"Agent B generated follow-up question: {followup_question}") 
-            logging.info(f"Response Type: {type(followup_question)}")
+            logging.info(f"\n---------------------------------------------------------\nAgent B generated follow-up question: {followup_question}") 
+            logging.info(f"\n---------------------------------------------------------\nResponse Type: {type(followup_question)}")
             session.update({
                 "query": user_query,
                 "responses": [],
@@ -127,9 +127,11 @@ def submit():
             })
             return jsonify({"question": followup_question["question"], "answer_options": followup_question["suggested_answer"], "clear_input": True})  # Fixed response format
         
+
+        
         elif classification == "GREET":
             answer = respond_greeting(user_query)
-            logging.info(f"Greeting response: {answer}")
+            logging.info(f"\n---------------------------------------------------------\nGreeting response: {answer}")
             return jsonify({
                 "final_response": False,
                 "greeting": True,
@@ -150,12 +152,12 @@ def submit():
 def submit_response(user_response):
     try:
         data = request.json
-        logging.info(f"\n\n\nUser Session: {session}\n\n\n")
-        question_index = data.get("question_index", 0)  #Ensure it defaults to 0 if missing
+        logging.info(f"\n---------------------------------------------------------\n\n\n\nUser Session: {session}\n\n\n")
+        # question_index = data.get("question_index", 0)  #Ensure it defaults to 0 if missing
 
-        if question_index is None:
-            logging.error("Missing question_index in request.")
-            return jsonify({"error": "Invalid request: question_index is missing."}), 400
+        # if question_index is None:
+        #     logging.error("Missing question_index in request.")
+        #     return jsonify({"error": "Invalid request: question_index is missing."}), 400
 
         # Ensure the session has an assigned agent
         assigned_agent = session.get("assigned_agent")
@@ -163,7 +165,7 @@ def submit_response(user_response):
             logging.error("Error: No assigned agent found in session.")
             return jsonify({"error": "Session error. Please restart your query."}), 500
 
-        logging.info(f"Processing response using Agent {assigned_agent}.")
+        logging.info(f"\n---------------------------------------------------------\nProcessing response using Agent {assigned_agent}.")
 
         # Ensure `scores` exists before accessing it
         if "scores" not in session:
@@ -173,19 +175,19 @@ def submit_response(user_response):
         if assigned_agent == "B":
             if session.get("availability", False):
                 session["user_availability"] = user_response
-                logging.info(f"User Availability Recorded: {user_response}")  
+                logging.info(f"\n---------------------------------------------------------\nUser Availability Recorded: {user_response}")  
                 return final_result(agent="B")
             
-            logging.info(f"Question Index: {question_index}")
-            logging.info(f"User Session: {len(session['questions'])}")
+            # logging.info(f"\n---------------------------------------------------------\nQuestion Index: {question_index}")
+            logging.info(f"\n---------------------------------------------------------\nUser Session: {len(session['questions'])}")
 
-            if question_index >= len(session["questions"]):
-                return jsonify({"error": "Invalid question index."}), 400
-
-            question = session["questions"][question_index]
-            logging.info(f"Received user response: {user_response}")
-
+            # if question_index >= len(session["questions"]):
+            #     return jsonify({"error": "Invalid question index."}), 400
             question_count = len(session["responses"])
+            question = session["questions"][question_count]
+            logging.info(f"\n---------------------------------------------------------\nReceived user response: {user_response}")
+
+            
             score, reasoning, more_questions_needed = agent_b_score_response(user_response, question, question_count)
 
             # session["responses"].append(user_response)
@@ -207,8 +209,8 @@ def submit_response(user_response):
             elif next_question_count >= MAX_QUESTIONS:
                 more_questions_needed = "No"
 
-            logging.info(f"question_count: {question_count}, next_question_count: {next_question_count}, forced more_questions_needed: {more_questions_needed}")
-            logging.info(f"Scored {question_count + 1}/{MAX_QUESTIONS}: {score} - {reasoning} - More Needed? {more_questions_needed}")
+            logging.info(f"\n---------------------------------------------------------\nquestion_count: {question_count}, next_question_count: {next_question_count}, forced more_questions_needed: {more_questions_needed}")
+            logging.info(f"\n---------------------------------------------------------\nScored {question_count + 1}/{MAX_QUESTIONS}: {score} - {reasoning} - More Needed? {more_questions_needed}")
 
             # If max questions reached or no more questions needed → Final Response
             if next_question_count >= MAX_QUESTIONS or more_questions_needed == "No":
@@ -226,6 +228,7 @@ def submit_response(user_response):
                 user_input_with_history += f"User: {session['query']}\n\n"
                 for i, (response, question) in enumerate(zip(session["responses"], session["questions"])):
                     user_input_with_history += f"Assistant{i+1}: {question}\nUser{i+1}: {response}\n\n"
+                    
             next_question = agent_b_followup(user_input_with_history)
 
             if "agent_b_error" in next_question:
@@ -258,7 +261,7 @@ def final_result(agent, answer=None):
             if "assigned_agent" in session:
                 del session["assigned_agent"]
             session["conversation_ended"] = True  # Mark conversation as ended
-            logging.info(f"Answer: {answer}")
+            logging.info(f"\n---------------------------------------------------------\nAnswer: {answer}")
 
             if "agent_a_error" in answer:
                 return jsonify({"retry_error": answer["agent_a_error"]}), 500
@@ -274,14 +277,14 @@ def final_result(agent, answer=None):
             user_level = "Beginner" if avg_score < 2 else "Intermediate" if avg_score < 3.5 else "Advanced"
             summary = agent_b_summarize_learning(session["responses"], session["user_availability"], session["query"])
             key_elements = agent_b_extract_key_elements(summary,user_level)
-            logging.info(f"User level: {user_level}")
+            logging.info(f"\n---------------------------------------------------------\nUser level: {user_level}")
         
             relevant_topic_ids = find_relevant_topic_ids(summary)
             relevant_user_level_id = find_relevant_user_level_ids(user_level)
             relevant_doc_ids = filter_records_by_topics_and_user_level(relevant_topic_ids, relevant_user_level_id)
 
             rag_response = query_rag(summary, relevant_doc_ids)
-            logging.info(f"RAG Response: {rag_response}")
+            logging.info(f"\n---------------------------------------------------------\nRAG Response: {rag_response}")
 
             if "rag_error" in rag_response:
                 return jsonify({"retry_error": rag_response["rag_error"]}), 500

@@ -53,13 +53,13 @@ RETRY_ERROR = "Something went wrong with the servers. Please try again."
 GENERAL_ERROR = "An error occurred. Please enter the query again or try reloading the page."
 
 # LLMs
-llm_master = Ollama(model="mistral")
+llm_master = Ollama(model="openchat:latest")
 llm_agent_a = Ollama(model="mistral")
 llm_agent_b = Ollama(model="mistral")
 
 # File paths
-main_excel_file = "data/Resources Version 3.xlsx"
-topic_ids_excel_file = "data/topic_ids_v3.xlsx"
+main_excel_file = "data/Resources Version 4.xlsx"
+topic_ids_excel_file = "data/topic_ids_v4.xlsx"
 user_level_ids_excel_file = "data/user_level_ids.xlsx"
 
 # Excel columns
