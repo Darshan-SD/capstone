@@ -20,15 +20,18 @@ import sys
 
 
 ### Read Topic IDs from Excel ###
-def get_topic_ids():
+def get_topic_ids(output):
     df = pd.read_excel(topic_ids_excel_file, sheet_name="topic_ids")
-    df = df.sample(n=6)
+    if output=="random":
+        df = df.sample(n=6)
     return dict(zip(df[topicids_col], df[topicids_value_col]))
 
 ### Find Relevant Topic IDs ###
 def find_relevant_topic_ids(summary):
-    topic_dict = get_topic_ids()
+    topic_dict = get_topic_ids(output=None)
     topics_str = "\n".join([f"{topic}: {topic_id}" for topic, topic_id in topic_dict.items()])
+    print("\n-------------------------------------TOPICS_STR:\n", topics_str)
+    print("\n-------------------------------------Summary:\n", summary)
     prompt = find_relevant_topic_ids_prompt(summary, topics_str)
     response = llm_agent_b.invoke(prompt).strip()
     

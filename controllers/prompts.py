@@ -191,8 +191,8 @@ def agent_b_score_response_prompt(response, question, question_count):
 
     **TASKS:**
     1. Score the response on a scale from 0 to 5:
-        - 0: No relevant information.
-        - 5: Excellent response.
+        - 0: No knowledge about the topic mentioned in the question.
+        - 5: Excellent knowledge of topic being asked in the question.
     
     **RULES:**
         - You are in a dynamic learning session that includes a minimum of {MIN_QUESTIONS} and a maximum of {MAX_QUESTIONS} follow-up questions.

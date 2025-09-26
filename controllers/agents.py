@@ -229,7 +229,7 @@ def agent_b_extract_key_elements(summary,user_level):
     return key_elements
 
 def respond_greeting(user_query):
-    topic_dict = get_topic_ids()
+    topic_dict = get_topic_ids(output="random")
     topics_str = "\n".join([f"{topic}" for topic, topic_id in topic_dict.items()])
     logging.info(f"\n---------------------------------------------------------\nTOPIC DICT:", topic_dict)
     logging.info(f"\n---------------------------------------------------------\nTOPIC STRING:", topics_str)
